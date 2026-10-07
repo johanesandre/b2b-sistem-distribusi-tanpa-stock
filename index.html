@@ -1,0 +1,2509 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERP B2B - PT PKP</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; }
+  .sidebar-item { transition: all 0.2s; }
+  .sidebar-item:hover { background: rgba(255,255,255,0.1); }
+  .sidebar-item.active { background: #2563eb; border-left: 4px solid #60a5fa; }
+  .card { transition: transform 0.2s, box-shadow 0.2s; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+  .modal { display: none; }
+  .modal.active { display: flex; }
+  table { border-collapse: collapse; }
+  th { font-weight: 600; }
+  .badge { padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+  .line-row input { font-size: 12px; }
+  .disabled-overlay { opacity: 0.5; pointer-events: none; }
+  .print-toolbar { position: sticky; z-index: 20; background: white; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .print-toolbar-top { top: 0; }
+  .print-toolbar-bottom { bottom: 0; border-bottom: none; border-top: 1px solid #e2e8f0; box-shadow: 0 -2px 8px rgba(0,0,0,0.06); }
+  .print-hint { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 8px 12px; font-size: 12px; color: #1e40af; border-radius: 4px; }
+  .checkbox-inv { width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb; }
+  tr.row-selected { background: #dbeafe !important; }
+  .invoice-paper { width: 148mm; min-height: 210mm; padding: 10mm; background: white; font-size: 11px; color: #000; }
+  .invoice-paper table { width: 100%; }
+  .invoice-paper .header-title { font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+  .invoice-paper .line-item th { border-bottom: 1px solid #000; padding: 4px; text-align: left; font-size: 10px; }
+  .invoice-paper .line-item td { padding: 4px; border-bottom: 1px dotted #999; }
+  #pdfRenderStage { position: fixed; top: 0; left: 0; width: 148mm; background: white; z-index: 1; opacity: 0; pointer-events: none; overflow: hidden; }
+  @media print {
+    body * { visibility: hidden; }
+    #invoicePrintArea, #invoicePrintArea * { visibility: visible; }
+    #invoicePrintArea { position: absolute; left: 0; top: 0; width: 148mm; padding: 0; font-size: 11px; }
+    #invoicePrintArea .invoice-paper-page { width: 148mm; min-height: 210mm; padding: 10mm; page-break-after: always; page-break-inside: avoid; }
+    #invoicePrintArea .invoice-paper-page:last-child { page-break-after: auto; }
+    @page { size: A5 portrait; margin: 0; }
+  }
+  .toast-box { position: fixed; bottom: 24px; right: 24px; background: #1e293b; color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px; }
+  .spinner { border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; width: 16px; height: 16px; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .info-banner { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-left: 4px solid #2563eb; padding: 12px 16px; border-radius: 6px; font-size: 12px; color: #1e40af; }
+  .icon-btn { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; transition: all 0.15s; display: inline-flex; align-items: center; gap: 3px; }
+  .icon-btn:hover { transform: translateY(-1px); }
+  .period-selector { background: white; border: 2px solid #3b82f6; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+</style>
+</head>
+<body class="bg-gray-100">
+
+<div class="flex h-screen overflow-hidden">
+  <aside class="w-64 bg-slate-800 text-white flex flex-col">
+    <div class="p-4 border-b border-slate-700">
+      <h1 class="text-xl font-bold">📊 ERP B2B</h1>
+      <p class="text-xs text-slate-400 mt-1">PT PKP - Trading</p>
+      <div class="mt-2 text-xs bg-slate-700 px-2 py-1 rounded inline-block" id="periodBadge">Periode: Okt 2026</div>
+    </div>
+    <nav class="flex-1 overflow-y-auto p-2 text-sm">
+      <div class="text-slate-400 text-xs uppercase px-3 py-2">Dashboard</div>
+      <a href="#" onclick="showPage('dashboard', this)" class="sidebar-item active flex items-center gap-2 px-3 py-2 rounded"><span>🏠</span> Dashboard</a>
+
+      <div class="text-slate-400 text-xs uppercase px-3 py-2 mt-2">Master</div>
+      <a href="#" onclick="showPage('customer', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>👥</span> Customer</a>
+      <a href="#" onclick="showPage('supplier', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>🏭</span> Supplier</a>
+      <a href="#" onclick="showPage('produk', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>📦</span> Produk</a>
+      <a href="#" onclick="showPage('coa', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>📋</span> Chart of Account</a>
+
+      <div class="text-slate-400 text-xs uppercase px-3 py-2 mt-2">Transaksi</div>
+      <a href="#" onclick="showPage('so', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>📝</span> Sales Order</a>
+      <a href="#" onclick="showPage('invoice', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>🧾</span> Invoice</a>
+      <a href="#" onclick="showPage('beban', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>💸</span> Beban Operasional</a>
+      <a href="#" onclick="showPage('aset', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>🏢</span> Aset Tetap</a>
+
+      <div class="text-slate-400 text-xs uppercase px-3 py-2 mt-2">Akuntansi</div>
+      <a href="#" onclick="showPage('jurnal', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>📚</span> Jurnal Umum</a>
+      <a href="#" onclick="showPage('buku-besar', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>📖</span> Buku Besar</a>
+      <a href="#" onclick="showPage('trial', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>⚖️</span> Trial Balance</a>
+
+      <div class="text-slate-400 text-xs uppercase px-3 py-2 mt-2">Laporan</div>
+      <a href="#" onclick="showPage('lap-penjualan', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>💰</span> Lap. Penjualan</a>
+      <a href="#" onclick="showPage('labarugi', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>📈</span> Laba Rugi</a>
+      <a href="#" onclick="showPage('neraca', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>🏛️</span> Neraca</a>
+      <a href="#" onclick="showPage('aruskas', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>💵</span> Arus Kas</a>
+
+      <div class="text-slate-400 text-xs uppercase px-3 py-2 mt-2">Kontrol & Audit</div>
+      <a href="#" onclick="showPage('tutupbuku', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>🔒</span> Tutup Buku</a>
+      <a href="#" onclick="showPage('audit', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>📋</span> Audit Log</a>
+    </nav>
+    <div class="p-3 border-t border-slate-700 text-xs text-slate-400">Mode: <span class="text-green-400 font-semibold">Minimalis</span></div>
+  </aside>
+
+  <main class="flex-1 overflow-y-auto">
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+      <div class="flex justify-between items-center px-6 py-3">
+        <h2 id="pageTitle" class="text-lg font-semibold text-slate-800">Dashboard</h2>
+        <div class="flex items-center gap-3 text-sm">
+          <span class="text-slate-500" id="todayDate"></span>
+          <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">A</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-6">
+
+      <section id="page-dashboard" class="page">
+        <div class="info-banner mb-4">💡 <strong>Mode Minimalis:</strong> Beli & jual dalam 1 transaksi. Input SO → otomatis catat pembelian + penjualan → terbitkan Invoice.</div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="card bg-white rounded-lg p-4 shadow"><div class="text-slate-500 text-xs">Total Penjualan</div><div class="text-2xl font-bold text-blue-600" id="kpiPenjualan">Rp 0</div><div class="text-xs text-green-600 mt-1">↑ Cash</div></div>
+          <div class="card bg-white rounded-lg p-4 shadow"><div class="text-slate-500 text-xs">Total Pembelian (HPP)</div><div class="text-2xl font-bold text-orange-600" id="kpiPembelian">Rp 0</div><div class="text-xs text-slate-400 mt-1">dari Supplier</div></div>
+          <div class="card bg-white rounded-lg p-4 shadow"><div class="text-slate-500 text-xs">Laba Kotor</div><div class="text-2xl font-bold text-green-600" id="kpiLaba">Rp 0</div><div class="text-xs text-slate-400 mt-1">Penjualan − HPP</div></div>
+          <div class="card bg-white rounded-lg p-4 shadow"><div class="text-slate-500 text-xs">Saldo Kas</div><div class="text-2xl font-bold text-slate-700" id="kpiKas">Rp 0</div><div class="text-xs text-slate-400 mt-1">Bank Tunggal</div></div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div class="bg-white rounded-lg p-4 shadow"><h3 class="font-semibold mb-3">Tren Penjualan vs Pembelian</h3><canvas id="chartTren" height="120"></canvas></div>
+          <div class="bg-white rounded-lg p-4 shadow"><h3 class="font-semibold mb-3">Top Produk (Qty Terjual)</h3><canvas id="chartProduk" height="120"></canvas></div>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow">
+          <h3 class="font-semibold mb-3">Transaksi Terakhir</h3>
+          <table class="w-full text-sm">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr><th class="text-left p-2">Tanggal</th><th class="text-left p-2">No. Invoice</th><th class="text-left p-2">Customer</th><th class="text-left p-2">Supplier</th><th class="text-right p-2">Penjualan</th><th class="text-right p-2">HPP</th></tr>
+            </thead>
+            <tbody id="tblTransaksi"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-customer" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4">
+            <h3 class="font-semibold">Daftar Customer (Non-PKP)</h3>
+            <div class="flex gap-2">
+              <button onclick="exportExcel('tblCustomer','customer')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+              <button onclick="openModal('modalCustomer')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm btn-add">+ Tambah</button>
+            </div>
+          </div>
+          <table class="w-full text-sm" id="tblCustomer">
+            <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Kode</th><th class="text-left p-2">Nama</th><th class="text-left p-2">Alamat</th><th class="text-left p-2">NPWP / KTP</th><th class="text-left p-2">Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-supplier" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4">
+            <h3 class="font-semibold">Daftar Supplier (PKP)</h3>
+            <div class="flex gap-2">
+              <button onclick="exportExcel('tblSupplier','supplier')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+              <button onclick="openModal('modalSupplier')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm btn-add">+ Tambah</button>
+            </div>
+          </div>
+          <table class="w-full text-sm" id="tblSupplier">
+            <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Kode</th><th class="text-left p-2">Nama</th><th class="text-left p-2">Alamat</th><th class="text-left p-2">NPWP</th><th class="text-left p-2">Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-produk" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4">
+            <h3 class="font-semibold">Master Produk</h3>
+            <div class="flex gap-2">
+              <button onclick="exportExcel('tblProduk','produk')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+              <button onclick="openModal('modalProduk')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm btn-add">+ Tambah</button>
+            </div>
+          </div>
+          <div class="info-banner mb-3 text-xs">📦 Di mode minimalis, master produk <strong>tidak menyimpan stok</strong>. Field qty terjual hanya untuk rekap.</div>
+          <table class="w-full text-sm" id="tblProduk">
+            <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Kode</th><th class="text-left p-2">Nama</th><th class="text-left p-2">Satuan</th><th class="text-right p-2">Total Qty Terjual</th><th class="text-right p-2">Total Nilai Terjual</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-coa" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4">
+            <h3 class="font-semibold">Chart of Account</h3>
+            <button onclick="exportExcel('tblCOA','coa')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+          </div>
+          <table class="w-full text-sm" id="tblCOA">
+            <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Kode</th><th class="text-left p-2">Nama Akun</th><th class="text-left p-2">Kategori</th><th class="text-left p-2">Saldo Normal</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-so" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4">
+            <h3 class="font-semibold">Sales Order</h3>
+            <div class="flex gap-2">
+              <button onclick="exportExcel('tblSO','sales-order')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+              <button onclick="openModal('modalSO')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm btn-add">+ Buat SO</button>
+            </div>
+          </div>
+          <div class="info-banner mb-3">💡 1 SO = 1 Customer + 1 Supplier + banyak produk.</div>
+          <table class="w-full text-sm" id="tblSO">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr><th class="text-left p-2">No. SO</th><th class="text-left p-2">Tanggal</th><th class="text-left p-2">Customer</th><th class="text-left p-2">Supplier</th><th class="text-right p-2">Total Item</th><th class="text-right p-2">Total Jual</th><th class="text-left p-2">Status</th><th class="text-center p-2">Aksi</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-invoice" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4">
+            <h3 class="font-semibold">Invoice Penjualan (Cash)</h3>
+            <div class="flex gap-2"><button onclick="exportExcel('tblInvoice','invoice')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button></div>
+          </div>
+          <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+            <div class="flex items-center gap-3 text-sm">
+              <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="chkSelectAll" class="checkbox-inv" onchange="toggleSelectAllInvoices()"><span class="font-semibold text-slate-600">Pilih Semua</span></label>
+              <span class="text-slate-400">|</span>
+              <span class="text-slate-600"><span id="invSelectedCount" class="font-bold text-blue-600">0</span> dipilih</span>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+              <button onclick="printSelectedInvoices()" id="btnPrintSelected" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed" disabled>🖨 Preview Terpilih</button>
+              <button onclick="downloadSelectedInvoicesPDF()" id="btnDownloadSelected" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed" disabled>📥 Download PDF Terpilih</button>
+              <button onclick="deleteSelectedInvoices()" id="btnDeleteSelected" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1.5 rounded text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed" disabled>🗑 Hapus Terpilih</button>
+            </div>
+          </div>
+          <table class="w-full text-sm" id="tblInvoice">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr><th class="text-center p-2 w-10"><input type="checkbox" id="chkHeadAll" class="checkbox-inv" onchange="toggleSelectAllInvoices()"></th><th class="text-left p-2">No. Invoice</th><th class="text-left p-2">Tanggal</th><th class="text-left p-2">Customer</th><th class="text-right p-2">Penjualan</th><th class="text-right p-2">HPP</th><th class="text-right p-2">Laba</th><th class="text-left p-2">Faktur Pajak</th><th class="text-center p-2">Aksi</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-beban" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4">
+            <h3 class="font-semibold">💸 Beban Operasional</h3>
+            <div class="flex gap-2">
+              <button onclick="exportExcel('tblBeban','beban-operasional')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+              <button onclick="openModalBeban()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm btn-add">+ Tambah Beban</button>
+            </div>
+          </div>
+          <div class="info-banner mb-3">💡 Input pengeluaran rutin (gaji, listrik, sewa, transportasi). Jurnal otomatis dibuat.</div>
+          <div class="grid grid-cols-3 gap-3 mb-4 text-sm">
+            <div class="bg-orange-50 p-3 rounded"><div class="text-xs text-slate-500">Total Beban Bulan Ini</div><div class="font-bold text-orange-700" id="bebanTotal">Rp 0</div></div>
+            <div class="bg-blue-50 p-3 rounded"><div class="text-xs text-slate-500">Jumlah Transaksi</div><div class="font-bold text-blue-700" id="bebanCount">0</div></div>
+            <div class="bg-slate-50 p-3 rounded"><div class="text-xs text-slate-500">Beban Terbesar</div><div class="font-bold text-slate-700" id="bebanTop">-</div></div>
+          </div>
+          <table class="w-full text-sm" id="tblBeban">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr><th class="text-left p-2">Tanggal</th><th class="text-left p-2">Jenis Beban</th><th class="text-left p-2">Keterangan</th><th class="text-right p-2">Jumlah</th><th class="text-center p-2">Aksi</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-aset" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4 flex-wrap gap-2">
+            <h3 class="font-semibold">🏢 Aset Tetap & Penyusutan</h3>
+            <div class="flex gap-2 flex-wrap">
+              <button onclick="exportExcel('tblAset','aset-tetap')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+              <button onclick="openModalAset()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm btn-add">+ Tambah Aset</button>
+              <button onclick="prosesPenyusutan()" class="bg-purple-600 text-white px-3 py-1.5 rounded text-sm btn-add">⚙ Proses Penyusutan Bulan Ini</button>
+            </div>
+          </div>
+          <div class="info-banner mb-3">💡 <strong>Penyusutan Otomatis:</strong> Klik <strong>"⚙ Proses Penyusutan"</strong> untuk hitung penyusutan semua aset bulan ini (Garis Lurus). 1x per bulan.</div>
+          <div class="grid grid-cols-4 gap-3 mb-4 text-sm">
+            <div class="bg-blue-50 p-3 rounded"><div class="text-xs text-slate-500">Total Perolehan</div><div class="font-bold text-blue-700" id="asetTotalPerolehan">Rp 0</div></div>
+            <div class="bg-red-50 p-3 rounded"><div class="text-xs text-slate-500">Akumulasi Penyusutan</div><div class="font-bold text-red-700" id="asetTotalAkum">Rp 0</div></div>
+            <div class="bg-green-50 p-3 rounded"><div class="text-xs text-slate-500">Nilai Buku</div><div class="font-bold text-green-700" id="asetNilaiBuku">Rp 0</div></div>
+            <div class="bg-orange-50 p-3 rounded"><div class="text-xs text-slate-500">Penyusutan Bulan Ini</div><div class="font-bold text-orange-700" id="asetPenyusutanBulanIni">Rp 0</div></div>
+          </div>
+          <table class="w-full text-sm" id="tblAset">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr><th class="text-left p-2">Tanggal Beli</th><th class="text-left p-2">Nama Aset</th><th class="text-left p-2">Kategori</th><th class="text-right p-2">Harga Perolehan</th><th class="text-center p-2">Umur</th><th class="text-right p-2">Penyusutan/Bln</th><th class="text-right p-2">Akumulasi</th><th class="text-right p-2">Nilai Buku</th><th class="text-center p-2">Aksi</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- JURNAL UMUM dengan filter periode -->
+      <section id="page-jurnal" class="page hidden">
+        <div class="period-selector">
+          <label class="text-sm font-semibold text-slate-700 mb-2 block">📅 Pilih Periode:</label>
+          <div class="flex gap-2 items-center flex-wrap">
+            <select id="jurnalPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold">
+              <option value="">-- Pilih Bulan --</option>
+            </select>
+            <span class="text-slate-400 text-xs">atau rentang custom:</span>
+            <input type="date" id="jurnalDari" class="border rounded p-1.5 text-sm">
+            <span class="text-slate-400">s/d</span>
+            <input type="date" id="jurnalSampai" class="border rounded p-1.5 text-sm">
+            <button onclick="renderJurnal()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold">🔍 Tampilkan</button>
+          </div>
+          <div class="text-xs text-slate-500 mt-2" id="jurnalInfo"></div>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4">
+            <h3 class="font-semibold">Jurnal Umum</h3>
+            <div class="flex gap-2">
+              <button onclick="openModalJurnalKoreksi()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm btn-add">📝 Jurnal Koreksi</button>
+              <button onclick="exportExcel('tblJurnal','jurnal-umum')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+            </div>
+          </div>
+          <table class="w-full text-sm" id="tblJurnal">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr><th class="text-left p-2">Tanggal</th><th class="text-left p-2">No. Jurnal</th><th class="text-left p-2">Keterangan</th><th class="text-left p-2">Akun</th><th class="text-right p-2">Debit</th><th class="text-right p-2">Kredit</th></tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot class="bg-slate-200 font-bold">
+              <tr><td colspan="4" class="text-right p-2">TOTAL</td><td class="text-right p-2" id="jurnalTotalD">Rp 0</td><td class="text-right p-2" id="jurnalTotalK">Rp 0</td></tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <!-- BUKU BESAR dengan filter periode -->
+      <section id="page-buku-besar" class="page hidden">
+        <div class="period-selector">
+          <label class="text-sm font-semibold text-slate-700 mb-2 block">📅 Pilih Periode:</label>
+          <div class="flex gap-2 items-center flex-wrap">
+            <select id="bbPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold">
+              <option value="">-- Pilih Bulan --</option>
+            </select>
+            <select id="bbAkun" class="border rounded px-3 py-2 text-sm">
+              <option value="">-- Semua Akun --</option>
+            </select>
+            <button onclick="renderBukuBesar()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold">🔍 Tampilkan</button>
+            <button onclick="exportBukuBesar()" class="bg-green-600 text-white px-3 py-2 rounded text-sm">⬇ Excel</button>
+          </div>
+          <div class="text-xs text-slate-500 mt-2" id="bbInfo"></div>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div id="bukuBesarContainer"></div>
+        </div>
+      </section>
+
+      <!-- TRIAL BALANCE dengan filter periode -->
+      <section id="page-trial" class="page hidden">
+        <div class="period-selector">
+          <label class="text-sm font-semibold text-slate-700 mb-2 block">📅 Pilih Periode:</label>
+          <div class="flex gap-2 items-center flex-wrap">
+            <select id="tbPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold">
+              <option value="">-- Pilih Bulan --</option>
+            </select>
+            <button onclick="renderTrial()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold">🔍 Tampilkan</button>
+            <button onclick="exportExcel('tblTrial','trial-balance')" class="bg-green-600 text-white px-3 py-2 rounded text-sm">⬇ Excel</button>
+          </div>
+          <div class="text-xs text-slate-500 mt-2" id="tbInfo"></div>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow">
+          <table class="w-full text-sm" id="tblTrial">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr><th class="text-left p-2">Kode</th><th class="text-left p-2">Nama Akun</th><th class="text-right p-2">Debit</th><th class="text-right p-2">Kredit</th></tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot class="bg-slate-200 font-bold">
+              <tr><td colspan="2" class="text-right p-2">TOTAL</td><td class="text-right p-2" id="totalDebit">Rp 0</td><td class="text-right p-2" id="totalKredit">Rp 0</td></tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-lap-penjualan" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+            <h3 class="font-semibold">Laporan Penjualan Periodik</h3>
+            <div class="flex gap-2 items-center">
+              <label class="text-xs">Dari</label><input type="date" id="lapJualDari" class="border rounded p-1.5 text-sm">
+              <label class="text-xs">Sampai</label><input type="date" id="lapJualSampai" class="border rounded p-1.5 text-sm">
+              <button onclick="renderLapPenjualan()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm">🔍 Tampilkan</button>
+              <button onclick="exportLapPenjualan()" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mb-4 text-sm">
+            <div class="bg-blue-50 p-3 rounded"><div class="text-xs text-slate-500">Total Penjualan</div><div class="font-bold text-blue-700" id="lapJualTotal">Rp 0</div></div>
+            <div class="bg-orange-50 p-3 rounded"><div class="text-xs text-slate-500">Total HPP</div><div class="font-bold text-orange-700" id="lapJualHPP">Rp 0</div></div>
+            <div class="bg-green-50 p-3 rounded"><div class="text-xs text-slate-500">Laba Kotor</div><div class="font-bold text-green-700" id="lapJualLaba">Rp 0</div></div>
+          </div>
+          <div class="mb-4"><h4 class="font-semibold text-sm mb-2">Rekap per Customer</h4>
+            <table class="w-full text-sm" id="tblLapJualCust">
+              <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Customer</th><th class="text-right p-2">Total</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="mb-4"><h4 class="font-semibold text-sm mb-2">Rekap per Produk</h4>
+            <table class="w-full text-sm" id="tblLapJualProd">
+              <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Produk</th><th class="text-right p-2">Qty</th><th class="text-right p-2">Penjualan</th><th class="text-right p-2">HPP</th><th class="text-right p-2">Laba</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div><h4 class="font-semibold text-sm mb-2">Detail Transaksi</h4>
+            <table class="w-full text-sm" id="tblLapJualDetail">
+              <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Tanggal</th><th class="text-left p-2">No. Invoice</th><th class="text-left p-2">Customer</th><th class="text-left p-2">Supplier</th><th class="text-left p-2">Produk</th><th class="text-right p-2">Qty</th><th class="text-right p-2">H. Jual</th><th class="text-right p-2">H. Beli</th><th class="text-right p-2">Laba</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-labarugi" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow max-w-2xl mx-auto">
+          <div class="flex justify-between mb-4">
+            <div class="text-center flex-1">
+              <h3 class="font-bold text-lg">PT PKP</h3>
+              <p class="text-sm text-slate-600">Laporan Laba Rugi</p>
+              <select id="lrPeriode" class="text-xs border rounded mt-1 px-2 py-1" onchange="renderLabaRugi()"></select>
+            </div>
+            <button onclick="exportExcel('tblLabaRugi','laba-rugi')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm self-start">⬇ Excel</button>
+          </div>
+          <table class="w-full text-sm" id="tblLabaRugi"><tbody></tbody></table>
+        </div>
+      </section>
+
+      <!-- NERACA dengan filter periode -->
+      <section id="page-neraca" class="page hidden">
+        <div class="period-selector max-w-4xl mx-auto">
+          <label class="text-sm font-semibold text-slate-700 mb-2 block">📅 Pilih Periode Neraca:</label>
+          <div class="flex gap-2 items-center flex-wrap">
+            <select id="neracaPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold">
+              <option value="">-- Pilih Bulan --</option>
+            </select>
+            <button onclick="renderNeraca()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold">🔍 Tampilkan</button>
+            <button onclick="exportNeraca()" class="bg-green-600 text-white px-3 py-2 rounded text-sm">⬇ Excel</button>
+          </div>
+          <div class="text-xs text-slate-500 mt-2" id="neracaInfo"></div>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow max-w-4xl mx-auto">
+          <div class="flex justify-between mb-4">
+            <div class="text-center flex-1"><h3 class="font-bold text-lg">PT PKP</h3><p class="text-sm text-slate-600">Neraca</p><p class="text-xs text-slate-500" id="neracaTgl">Per: -</p></div>
+          </div>
+          <div class="grid grid-cols-2 gap-6">
+            <div><h4 class="font-semibold bg-slate-100 p-2">ASET</h4><table class="w-full text-sm mt-2" id="tblAsetNeraca"><tbody></tbody></table></div>
+            <div><h4 class="font-semibold bg-slate-100 p-2">KEWAJIBAN & EKUITAS</h4><table class="w-full text-sm mt-2" id="tblKewajiban"><tbody></tbody></table></div>
+          </div>
+          <div class="mt-4 p-3 bg-blue-50 rounded text-sm">
+            <div class="flex justify-between font-bold"><span>Total Aset</span><span id="neracaTotalAset">Rp 0</span></div>
+            <div class="flex justify-between font-bold"><span>Total Kewajiban + Ekuitas</span><span id="neracaTotalPasiva">Rp 0</span></div>
+            <div id="neracaStatus" class="text-center mt-2 font-semibold"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ARUS KAS dengan filter periode -->
+      <section id="page-aruskas" class="page hidden">
+        <div class="period-selector max-w-2xl mx-auto">
+          <label class="text-sm font-semibold text-slate-700 mb-2 block">📅 Pilih Periode:</label>
+          <div class="flex gap-2 items-center flex-wrap">
+            <select id="akPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold">
+              <option value="">-- Pilih Bulan --</option>
+            </select>
+            <button onclick="renderArusKas()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold">🔍 Tampilkan</button>
+            <button onclick="exportExcel('tblArusKas','arus-kas')" class="bg-green-600 text-white px-3 py-2 rounded text-sm">⬇ Excel</button>
+          </div>
+          <div class="text-xs text-slate-500 mt-2" id="akInfo"></div>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow max-w-2xl mx-auto">
+          <div class="text-center mb-4"><h3 class="font-bold text-lg">PT PKP</h3><p class="text-sm text-slate-600">Laporan Arus Kas</p><p class="text-xs text-slate-500" id="akPeriodeLabel">Periode: -</p></div>
+          <table class="w-full text-sm" id="tblArusKas"><tbody></tbody></table>
+        </div>
+      </section>
+
+      <section id="page-tutupbuku" class="page hidden">
+        <div class="max-w-5xl mx-auto">
+          <div class="bg-white rounded-lg p-4 shadow mb-4">
+            <h3 class="font-semibold mb-4">Tutup Buku Bulanan</h3>
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4 text-sm"><strong>Perhatian:</strong> Tutup buku akan memindahkan Laba Rugi ke Laba Ditahan dan mengunci periode.</div>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="bg-slate-50 p-3 rounded"><div class="text-xs text-slate-500">Periode Aktif</div><div class="font-bold text-lg" id="closingPeriode">-</div></div>
+              <div class="bg-slate-50 p-3 rounded"><div class="text-xs text-slate-500">Status</div><div class="font-bold text-lg" id="closingStatus">-</div></div>
+            </div>
+            <table class="w-full text-sm mb-4"><tbody>
+              <tr><td class="p-2">Total Penjualan</td><td class="p-2 font-semibold" id="closingPenjualan">Rp 0</td></tr>
+              <tr><td class="p-2">Total HPP</td><td class="p-2 font-semibold" id="closingHPP">Rp 0</td></tr>
+              <tr><td class="p-2">Total Beban</td><td class="p-2 font-semibold" id="closingBeban">Rp 0</td></tr>
+              <tr class="bg-green-50"><td class="p-2 font-bold">Laba Bersih</td><td class="p-2 font-bold text-green-700" id="closingLaba">Rp 0</td></tr>
+            </tbody></table>
+            <div class="flex gap-2 flex-wrap">
+              <button onclick="doClosing()" id="btnClosing" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">🔒 Proses Tutup Buku</button>
+              <button onclick="openModal('modalUnlock')" id="btnUnlock" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 hidden">🔓 Buka Kembali Periode</button>
+              <button onclick="resetData()" class="bg-slate-500 text-white px-4 py-2 rounded hover:bg-slate-600">🔄 Reset Demo</button>
+            </div>
+            <div id="closingResult" class="mt-4"></div>
+          </div>
+          <div class="bg-white rounded-lg p-4 shadow">
+            <h3 class="font-semibold mb-3">📚 Riwayat Periode Tertutup</h3>
+            <table class="w-full text-sm" id="tblClosedPeriods">
+              <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Periode</th><th class="text-left p-2">Tgl Closing</th><th class="text-right p-2">Penjualan</th><th class="text-right p-2">HPP</th><th class="text-right p-2">Beban</th><th class="text-right p-2">Laba Bersih</th><th class="text-left p-2">Status</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-audit" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+            <h3 class="font-semibold">📋 Audit Log</h3>
+            <div class="flex gap-2 items-center flex-wrap">
+              <label class="text-xs">Dari</label><input type="date" id="auditDari" class="border rounded p-1.5 text-sm">
+              <label class="text-xs">Sampai</label><input type="date" id="auditSampai" class="border rounded p-1.5 text-sm">
+              <select id="auditFilterAksi" class="border rounded p-1.5 text-sm">
+                <option value="">Semua Aksi</option>
+                <option>TUTUP BUKU</option><option>UNLOCK</option><option>JURNAL KOREKSI</option>
+                <option>FAKTUR PAJAK</option><option>MASTER DATA</option>
+                <option>SO DIBUAT</option><option>SO DIUBAH</option><option>SO DIHAPUS</option>
+                <option>INVOICE DIBUAT</option><option>INVOICE DIHAPUS</option>
+                <option>BEBAN DIBUAT</option><option>BEBAN DIUBAH</option><option>BEBAN DIHAPUS</option>
+                <option>ASET DIBUAT</option><option>ASET DIUBAH</option><option>ASET DIHAPUS</option>
+                <option>PENYUSUTAN</option>
+              </select>
+              <button onclick="renderAuditLog()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm">🔍 Filter</button>
+              <button onclick="exportAuditLog()" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-4 gap-3 mb-4 text-sm">
+            <div class="bg-slate-50 p-3 rounded"><div class="text-xs text-slate-500">Total Entri</div><div class="font-bold" id="auditTotal">0</div></div>
+            <div class="bg-red-50 p-3 rounded"><div class="text-xs text-slate-500">Closing</div><div class="font-bold text-red-700" id="auditClosing">0</div></div>
+            <div class="bg-orange-50 p-3 rounded"><div class="text-xs text-slate-500">Unlock</div><div class="font-bold text-orange-700" id="auditUnlock">0</div></div>
+            <div class="bg-blue-50 p-3 rounded"><div class="text-xs text-slate-500">Koreksi</div><div class="font-bold text-blue-700" id="auditKoreksi">0</div></div>
+          </div>
+          <table class="w-full text-sm" id="tblAuditLog">
+            <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Waktu</th><th class="text-left p-2">Aksi</th><th class="text-left p-2">User</th><th class="text-left p-2">Detail</th><th class="text-left p-2">Sebelum</th><th class="text-left p-2">Sesudah</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div id="modalCustomer" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[420px]">
+    <h3 class="font-bold mb-3">Tambah Customer</h3>
+    <label class="text-xs font-semibold">Nama Customer *</label>
+    <input id="custNama" class="border w-full p-2 rounded mb-2 text-sm">
+    <label class="text-xs font-semibold">Alamat *</label>
+    <textarea id="custAlamat" rows="2" class="border w-full p-2 rounded mb-2 text-sm"></textarea>
+    <label class="text-xs font-semibold">NPWP / No. KTP</label>
+    <input id="custNPWP" class="border w-full p-2 rounded mb-3 text-sm">
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalCustomer')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="addCustomer()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalSupplier" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[420px]">
+    <h3 class="font-bold mb-3">Tambah Supplier</h3>
+    <label class="text-xs font-semibold">Nama Supplier *</label>
+    <input id="supNama" class="border w-full p-2 rounded mb-2 text-sm">
+    <label class="text-xs font-semibold">Alamat *</label>
+    <textarea id="supAlamat" rows="2" class="border w-full p-2 rounded mb-2 text-sm"></textarea>
+    <label class="text-xs font-semibold">NPWP</label>
+    <input id="supNPWP" class="border w-full p-2 rounded mb-3 text-sm">
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalSupplier')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="addSupplier()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalProduk" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-96">
+    <h3 class="font-bold mb-3">Tambah Produk</h3>
+    <input id="prodNama" placeholder="Nama Produk" class="border w-full p-2 rounded mb-2 text-sm">
+    <input id="prodSatuan" placeholder="Satuan" class="border w-full p-2 rounded mb-3 text-sm">
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalProduk')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="addProduk()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalSO" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[1000px] max-h-[90vh] overflow-y-auto">
+    <h3 class="font-bold mb-3" id="soModalTitle">Buat Sales Order</h3>
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-2 mb-3 text-xs">Isi <strong>Customer</strong>, <strong>Supplier</strong>, dan <strong>harga beli</strong> per produk.</div>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div><label class="text-xs font-semibold">Customer *</label><select id="soCustomer" class="border w-full p-2 rounded text-sm"></select></div>
+      <div><label class="text-xs font-semibold">Tanggal</label><input id="soTanggal" type="date" class="border w-full p-2 rounded text-sm"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div><label class="text-xs font-semibold">Supplier *</label><select id="soSupplier" class="border w-full p-2 rounded text-sm"></select></div>
+      <div><label class="text-xs font-semibold">No. PO Customer (opsional)</label><input id="soPoCustomer" class="border w-full p-2 rounded text-sm"></div>
+    </div>
+    <div class="border rounded mb-3">
+      <div class="bg-slate-100 p-2 flex justify-between items-center">
+        <span class="font-semibold text-sm">Item Produk</span>
+        <button onclick="addSOLine()" class="text-xs bg-blue-600 text-white px-2 py-1 rounded">+ Tambah Baris</button>
+      </div>
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs"><tr><th class="text-left p-1">Produk</th><th class="text-right p-1 w-16">Qty</th><th class="text-right p-1 w-24">Harga Beli</th><th class="text-right p-1 w-24">Harga Jual</th><th class="text-right p-1 w-24">Total Beli</th><th class="text-right p-1 w-24">Total Jual</th><th class="text-right p-1 w-20">Laba</th><th class="w-8"></th></tr></thead>
+        <tbody id="soLines"></tbody>
+        <tfoot class="bg-slate-50 font-semibold text-sm"><tr><td colspan="4" class="text-right p-2">TOTAL</td><td class="text-right p-2 text-orange-700" id="soTotalBeli">Rp 0</td><td class="text-right p-2 text-blue-700" id="soTotalJual">Rp 0</td><td class="text-right p-2 text-green-700" id="soTotalLaba">Rp 0</td><td></td></tr></tfoot>
+      </table>
+    </div>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalSO')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="saveSO()" id="soSaveBtn" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan SO</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalBeban" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[520px]">
+    <h3 class="font-bold mb-3" id="bebanModalTitle">💸 Tambah Beban Operasional</h3>
+    <label class="text-xs font-semibold">Tanggal *</label>
+    <input id="bebanTanggal" type="date" class="border w-full p-2 rounded mb-2 text-sm">
+    <label class="text-xs font-semibold">Jenis Beban *</label>
+    <select id="bebanJenis" class="border w-full p-2 rounded mb-2 text-sm"></select>
+    <label class="text-xs font-semibold">Keterangan *</label>
+    <input id="bebanKeterangan" class="border w-full p-2 rounded mb-2 text-sm">
+    <label class="text-xs font-semibold">Jumlah (Rp) *</label>
+    <input id="bebanJumlah" type="number" class="border w-full p-2 rounded mb-3 text-sm">
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalBeban')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="saveBeban()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan & Posting</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalAset" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[600px]">
+    <h3 class="font-bold mb-3" id="asetModalTitle">🏢 Tambah Aset Tetap</h3>
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-2 mb-3 text-xs">Isi untuk aset > Rp 5jt. Untuk < Rp 5jt gunakan menu <strong>Beban Operasional</strong>.</div>
+    <div class="grid grid-cols-2 gap-3 mb-2">
+      <div><label class="text-xs font-semibold">Tanggal Beli *</label><input id="asetTanggal" type="date" class="border w-full p-2 rounded text-sm"></div>
+      <div><label class="text-xs font-semibold">Kategori *</label>
+        <select id="asetKategori" class="border w-full p-2 rounded text-sm">
+          <option value="121">121 - Peralatan</option>
+          <option value="121A">121A - Komputer & Laptop</option>
+          <option value="121B">121B - Kendaraan</option>
+          <option value="121C">121C - Furnitur</option>
+        </select>
+      </div>
+    </div>
+    <label class="text-xs font-semibold">Nama Aset *</label>
+    <input id="asetNama" class="border w-full p-2 rounded mb-2 text-sm">
+    <div class="grid grid-cols-2 gap-3 mb-2">
+      <div><label class="text-xs font-semibold">Harga Perolehan (Rp) *</label><input id="asetHarga" type="number" class="border w-full p-2 rounded text-sm"></div>
+      <div><label class="text-xs font-semibold">Umur Ekonomis *</label>
+        <select id="asetUmur" class="border w-full p-2 rounded text-sm">
+          <option value="4">4 tahun (Komputer)</option>
+          <option value="5">5 tahun (Peralatan, Furnitur)</option>
+          <option value="8">8 tahun (Kendaraan)</option>
+          <option value="20">20 tahun (Bangunan)</option>
+        </select>
+      </div>
+    </div>
+    <label class="text-xs font-semibold">Keterangan</label>
+    <textarea id="asetKeterangan" rows="2" class="border w-full p-2 rounded mb-3 text-sm"></textarea>
+    <div id="asetPreview" class="bg-slate-50 p-3 rounded mb-3 text-xs hidden">
+      <div class="font-semibold mb-1">Preview Penyusutan:</div>
+      <div id="asetPreviewContent"></div>
+    </div>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalAset')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="saveAset()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan & Posting</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalFakturPajak" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[480px]">
+    <h3 class="font-bold mb-3">🧾 Pasang Faktur Pajak</h3>
+    <div id="fakturInfo" class="bg-slate-50 p-3 rounded mb-3 text-xs"></div>
+    <label class="text-xs font-semibold">Nomor Faktur Pajak *</label>
+    <input id="fakturNomor" class="border w-full p-2 rounded mb-3 text-sm">
+    <label class="text-xs font-semibold">Pembulatan (Rp)</label>
+    <input id="fakturPembulatan" type="number" class="border w-full p-2 rounded mb-1 text-sm" oninput="previewFakturPembulatan()">
+    <div id="fakturPembulatanInfo" class="text-xs mb-3"></div>
+    <div class="bg-blue-50 p-3 rounded mb-3 text-sm">
+      <div class="flex justify-between"><span>Nilai Invoice Sebelum</span><span id="fakturSebelum" class="font-semibold">Rp 0</span></div>
+      <div class="flex justify-between"><span>Pembulatan</span><span id="fakturDelta" class="font-semibold">Rp 0</span></div>
+      <div class="flex justify-between border-t border-blue-200 mt-1 pt-1"><span class="font-bold">Nilai Invoice Setelah</span><span id="fakturSesudah" class="font-bold text-blue-700">Rp 0</span></div>
+    </div>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalFakturPajak')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="saveFakturPajak()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalUnlock" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[520px]">
+    <h3 class="font-bold mb-3 text-red-600">🔓 Buka Kembali Periode</h3>
+    <div class="bg-red-50 border-l-4 border-red-500 p-3 mb-3 text-sm"><strong class="text-red-700">⚠️ PERINGATAN</strong><ul class="list-disc ml-5 mt-1 text-xs"><li>Jurnal closing akan dibatalkan otomatis</li><li>Laporan periode ini akan berubah</li><li>Semua perubahan dicatat di Audit Log</li></ul></div>
+    <label class="text-xs font-semibold">Alasan Unlock *</label>
+    <textarea id="unlockAlasan" rows="3" class="border w-full p-2 rounded mb-2 text-sm"></textarea>
+    <label class="text-xs font-semibold">Password *</label>
+    <input id="unlockPassword" type="password" class="border w-full p-2 rounded mb-2 text-sm">
+    <div class="text-xs text-slate-500 mb-3">Hint: <code class="bg-slate-100 px-1 rounded">admin123</code></div>
+    <label class="flex items-center gap-2 mb-3 text-xs cursor-pointer"><input id="unlockKonfirm" type="checkbox"> Saya paham konsekuensinya</label>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalUnlock')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="doUnlock()" class="px-3 py-1.5 text-sm rounded bg-red-600 text-white">🔓 Buka Periode</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalJurnalKoreksi" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[760px] max-h-[90vh] overflow-y-auto">
+    <h3 class="font-bold mb-3">📝 Jurnal Koreksi Manual</h3>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div><label class="text-xs font-semibold">Tanggal</label><input id="jkTanggal" type="date" class="border w-full p-2 rounded text-sm"></div>
+      <div><label class="text-xs font-semibold">Keterangan *</label><input id="jkKet" class="border w-full p-2 rounded text-sm"></div>
+    </div>
+    <div class="border rounded mb-3">
+      <div class="bg-slate-100 p-2 flex justify-between items-center">
+        <span class="font-semibold text-sm">Baris Jurnal</span>
+        <button onclick="addJKLine()" class="text-xs bg-blue-600 text-white px-2 py-1 rounded">+ Tambah Baris</button>
+      </div>
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs"><tr><th class="text-left p-1">Akun</th><th class="text-right p-1 w-32">Debit</th><th class="text-right p-1 w-32">Kredit</th><th class="w-8"></th></tr></thead>
+        <tbody id="jkLines"></tbody>
+        <tfoot class="bg-slate-50 font-semibold text-sm"><tr><td class="text-right p-2">TOTAL</td><td class="text-right p-2" id="jkTotalDebit">Rp 0</td><td class="text-right p-2" id="jkTotalKredit">Rp 0</td><td></td></tr></tfoot>
+      </table>
+    </div>
+    <div id="jkBalance" class="text-xs mb-3"></div>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalJurnalKoreksi')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="saveJurnalKoreksi()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan Jurnal</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalInvoicePrint" class="modal fixed inset-0 bg-black/70 items-start justify-center z-50 overflow-y-auto">
+  <div class="bg-slate-50 rounded-lg w-full max-w-4xl my-6 mx-4 shadow-2xl overflow-hidden">
+    <div class="print-toolbar print-toolbar-top flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-3">
+        <div class="text-2xl">🧾</div>
+        <div><h3 class="font-bold text-slate-800">Preview Invoice</h3><p class="text-xs text-slate-500" id="printCounter">1 dari 1</p></div>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="printCurrentBatch()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold">🖨 Print Semua</button>
+        <button onclick="downloadCurrentBatchPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-semibold">📥 Download PDF</button>
+        <button onclick="closeModal('modalInvoicePrint')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded text-sm font-semibold">✕ Tutup</button>
+      </div>
+    </div>
+    <div class="px-4 pt-3"><div class="print-hint">💡 <strong>Print Semua</strong> → dialog print browser. <strong>Download PDF</strong> → langsung download file.</div></div>
+    <div class="p-4 overflow-x-auto"><div id="invoicePrintArea" class="invoice-paper mx-auto shadow-lg"></div></div>
+    <div class="print-toolbar print-toolbar-bottom flex items-center justify-between gap-3 flex-wrap">
+      <div class="text-xs text-slate-500">Total <span id="printTotalCount" class="font-bold text-slate-700">1</span> invoice</div>
+      <div class="flex items-center gap-2">
+        <button onclick="printCurrentBatch()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold">🖨 Print Semua</button>
+        <button onclick="downloadCurrentBatchPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-semibold">📥 Download PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modalConfirm" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[420px]">
+    <h3 class="font-bold mb-3" id="confirmTitle">Konfirmasi</h3>
+    <div id="confirmMessage" class="text-sm text-slate-700 mb-4"></div>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalConfirm')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="executeConfirm()" id="confirmBtn" class="px-3 py-1.5 text-sm rounded bg-red-600 text-white">Ya, Lanjutkan</button>
+    </div>
+  </div>
+</div>
+
+<div id="pdfRenderStage" aria-hidden="true"></div>
+
+<script>
+/* =========================================================
+   STATE
+   ========================================================= */
+const DB = {
+  customers: [], suppliers: [], products: [],
+  coa: [
+    { kode: '101', nama: 'Kas / Bank', tipe: 'Aset Lancar', normal: 'D' },
+    { kode: '102', nama: 'Piutang Dagang', tipe: 'Aset Lancar', normal: 'D' },
+    { kode: '104', nama: 'PPN Masukan', tipe: 'Aset Lancar', normal: 'D' },
+    { kode: '105', nama: 'Perlengkapan', tipe: 'Aset Lancar', normal: 'D' },
+    { kode: '121', nama: 'Peralatan', tipe: 'Aset Tetap', normal: 'D' },
+    { kode: '121A', nama: 'Komputer & Laptop', tipe: 'Aset Tetap', normal: 'D' },
+    { kode: '121B', nama: 'Kendaraan', tipe: 'Aset Tetap', normal: 'D' },
+    { kode: '121C', nama: 'Furnitur', tipe: 'Aset Tetap', normal: 'D' },
+    { kode: '122', nama: 'Akumulasi Penyusutan Peralatan', tipe: 'Aset Tetap', normal: 'K' },
+    { kode: '122A', nama: 'Akum. Penyusutan Komputer & Laptop', tipe: 'Aset Tetap', normal: 'K' },
+    { kode: '122B', nama: 'Akum. Penyusutan Kendaraan', tipe: 'Aset Tetap', normal: 'K' },
+    { kode: '122C', nama: 'Akum. Penyusutan Furnitur', tipe: 'Aset Tetap', normal: 'K' },
+    { kode: '201', nama: 'Hutang Dagang', tipe: 'Kewajiban Lancar', normal: 'K' },
+    { kode: '202', nama: 'PPN Keluaran', tipe: 'Kewajiban Lancar', normal: 'K' },
+    { kode: '203', nama: 'Hutang Pajak (PPh 21/23)', tipe: 'Kewajiban Lancar', normal: 'K' },
+    { kode: '301', nama: 'Modal Disetor', tipe: 'Ekuitas', normal: 'K' },
+    { kode: '302', nama: 'Prive / Dividen', tipe: 'Ekuitas', normal: 'D' },
+    { kode: '303', nama: 'Laba Ditahan', tipe: 'Ekuitas', normal: 'K' },
+    { kode: '401', nama: 'Penjualan', tipe: 'Pendapatan', normal: 'K' },
+    { kode: '402', nama: 'Retur Penjualan', tipe: 'Pendapatan', normal: 'D' },
+    { kode: '403', nama: 'Diskon Penjualan', tipe: 'Pendapatan', normal: 'D' },
+    { kode: '501', nama: 'Harga Pokok Penjualan (HPP)', tipe: 'HPP', normal: 'D' },
+    { kode: '601', nama: 'Beban Gaji & Tunjangan', tipe: 'Beban Operasional', normal: 'D' },
+    { kode: '602', nama: 'Beban Sewa', tipe: 'Beban Operasional', normal: 'D' },
+    { kode: '603', nama: 'Beban Listrik, Air & Telepon', tipe: 'Beban Operasional', normal: 'D' },
+    { kode: '604', nama: 'Beban Transportasi', tipe: 'Beban Operasional', normal: 'D' },
+    { kode: '605', nama: 'Beban Perlengkapan', tipe: 'Beban Operasional', normal: 'D' },
+    { kode: '606', nama: 'Beban Penyusutan', tipe: 'Beban Operasional', normal: 'D' },
+    { kode: '607', nama: 'Beban Administrasi & Umum', tipe: 'Beban Operasional', normal: 'D' },
+    { kode: '608', nama: 'Beban Pajak & Perizinan', tipe: 'Beban Operasional', normal: 'D' },
+    { kode: '701', nama: 'Beban Bunga', tipe: 'Beban Lain', normal: 'D' },
+  ],
+  so: [], invoice: [], jurnal: [], saldo: {},
+  beban: [], aset: [], penyusutanLog: [],
+  closedPeriods: [], auditLog: [],
+  currentPeriod: '2026-10',
+  isClosed: false,
+  counter: { cust: 0, sup: 0, prod: 0, so: 0, inv: 0, jurnal: 0, audit: 0, beban: 0, aset: 0 },
+};
+
+const fmt = (n) => 'Rp ' + Math.round(n || 0).toLocaleString('id-ID');
+const fmtNum = (n) => Math.round(n || 0).toLocaleString('id-ID');
+const today = () => new Date().toISOString().slice(0,10);
+const nowISO = () => new Date().toISOString().replace('T', ' ').slice(0, 19);
+const currentMonth = () => today().slice(0, 7);
+const periodLabel = (p) => {
+  if (!p) return '-';
+  const [y, m] = p.split('-');
+  const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  return bulan[parseInt(m)-1] + ' ' + y;
+};
+function getPeriodRange(periode) {
+  if (!periode) return { dari: '0000-01-01', sampai: '9999-12-31' };
+  const [y, m] = periode.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  return { dari: `${y}-${String(m).padStart(2,'0')}-01`, sampai: `${y}-${String(m).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}` };
+}
+function listAvailablePeriods() {
+  // Kumpulkan periode dari transaksi + closedPeriods + bulan ini
+  const periods = new Set();
+  periods.add(currentMonth());
+  DB.jurnal.forEach(j => periods.add(j.tanggal.slice(0,7)));
+  DB.invoice.forEach(i => periods.add(i.tanggal.slice(0,7)));
+  DB.beban.forEach(b => periods.add(b.tanggal.slice(0,7)));
+  DB.aset.forEach(a => periods.add(a.tanggal.slice(0,7)));
+  DB.closedPeriods.forEach(p => periods.add(p.periode));
+  return Array.from(periods).sort().reverse();
+}
+function getSaldoPeriode(periode) {
+  // Hitung saldo per akun sampai akhir periode tertentu
+  const { sampai } = getPeriodRange(periode);
+  const saldo = {};
+  DB.jurnal.forEach(j => {
+    if (j.tanggal <= sampai) {
+      saldo[j.akun] = (saldo[j.akun] || 0) + (j.debit - j.kredit);
+    }
+  });
+  return saldo;
+}
+function getJurnalPeriode(periode) {
+  const { dari, sampai } = getPeriodRange(periode);
+  return DB.jurnal.filter(j => j.tanggal >= dari && j.tanggal <= sampai);
+}
+
+function logAudit(aksi, detail, sebelum = '-', sesudah = '-') {
+  DB.counter.audit++;
+  DB.auditLog.push({ id: DB.counter.audit, waktu: nowISO(), aksi, user: 'admin', detail, sebelum: String(sebelum), sesudah: String(sesudah) });
+}
+
+/* =========================================================
+   CONFIRM
+   ========================================================= */
+let confirmAction = null;
+function showConfirm(title, message, btnText, action) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').innerHTML = message;
+  document.getElementById('confirmBtn').textContent = btnText || 'Ya, Lanjutkan';
+  confirmAction = action;
+  document.getElementById('modalConfirm').classList.add('active');
+}
+function executeConfirm() { if (typeof confirmAction === 'function') confirmAction(); closeModal('modalConfirm'); }
+
+/* =========================================================
+   SELECTION
+   ========================================================= */
+let selectedInvoices = new Set();
+let currentPrintBatch = [];
+function toggleInvoiceSelection(invNo, checked) {
+  if (checked) selectedInvoices.add(invNo); else selectedInvoices.delete(invNo);
+  const row = document.querySelector(`tr[data-invno="${invNo}"]`);
+  if (row) { if (checked) row.classList.add('row-selected'); else row.classList.remove('row-selected'); }
+  updateInvoiceSelectionUI();
+}
+function toggleSelectAllInvoices() {
+  const headAll = document.getElementById('chkHeadAll');
+  const selectAll = document.getElementById('chkSelectAll');
+  const isChecked = (headAll && headAll.checked) || (selectAll && selectAll.checked);
+  if (headAll) headAll.checked = isChecked;
+  if (selectAll) selectAll.checked = isChecked;
+  if (isChecked) DB.invoice.forEach(i => selectedInvoices.add(i.no));
+  else selectedInvoices.clear();
+  document.querySelectorAll('.chk-inv').forEach(chk => {
+    if (chk.id === 'chkHeadAll' || chk.id === 'chkSelectAll') return;
+    chk.checked = isChecked;
+    const row = chk.closest('tr');
+    if (row) { if (isChecked) row.classList.add('row-selected'); else row.classList.remove('row-selected'); }
+  });
+  updateInvoiceSelectionUI();
+}
+function updateInvoiceSelectionUI() {
+  const count = selectedInvoices.size;
+  const el = document.getElementById('invSelectedCount');
+  if (el) el.textContent = count;
+  ['btnPrintSelected','btnDownloadSelected','btnDeleteSelected'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.disabled = count === 0;
+  });
+  const headAll = document.getElementById('chkHeadAll');
+  const selectAll = document.getElementById('chkSelectAll');
+  const allChecked = count > 0 && count === DB.invoice.length;
+  const indeterminate = count > 0 && count < DB.invoice.length;
+  if (headAll) { headAll.checked = allChecked; headAll.indeterminate = indeterminate; }
+  if (selectAll) { selectAll.checked = allChecked; selectAll.indeterminate = indeterminate; }
+}
+
+/* =========================================================
+   NAV
+   ========================================================= */
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  const target = document.getElementById('page-' + name);
+  if (target) target.classList.remove('hidden');
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const titles = {
+    dashboard: 'Dashboard', customer: 'Customer', supplier: 'Supplier', produk: 'Produk',
+    coa: 'Chart of Account', so: 'Sales Order', invoice: 'Invoice Penjualan',
+    beban: 'Beban Operasional', aset: 'Aset Tetap',
+    jurnal: 'Jurnal Umum', 'buku-besar': 'Buku Besar', trial: 'Trial Balance',
+    'lap-penjualan': 'Laporan Penjualan', labarugi: 'Laba Rugi', neraca: 'Neraca',
+    aruskas: 'Arus Kas', tutupbuku: 'Tutup Buku', audit: 'Audit Log'
+  };
+  document.getElementById('pageTitle').textContent = titles[name] || name;
+  try { renderAll(); } catch(e) { console.error(e); }
+}
+function openModal(id) {
+  if (DB.isClosed && ['modalSO','modalBeban','modalAset'].includes(id)) return alert('🔒 Periode sudah ditutup.');
+  if (id === 'modalSO') {
+    document.getElementById('soCustomer').innerHTML = DB.customers.map(c => `<option value="${c.kode}">${c.nama}</option>`).join('');
+    document.getElementById('soSupplier').innerHTML = DB.suppliers.map(s => `<option value="${s.kode}">${s.nama}</option>`).join('');
+    document.getElementById('soTanggal').value = today();
+    document.getElementById('soPoCustomer').value = '';
+    document.getElementById('soLines').innerHTML = '';
+    addSOLine();
+  }
+  document.getElementById(id).classList.add('active');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+/* =========================================================
+   EXPORT EXCEL
+   ========================================================= */
+function exportExcel(tableId, filename) {
+  const table = document.getElementById(tableId);
+  if (!table) return alert('Tabel tidak ditemukan');
+  if (typeof XLSX === 'undefined') return alert('Library XLSX belum ter-load.');
+  const clone = table.cloneNode(true);
+  clone.querySelectorAll('tr').forEach(tr => {
+    const cells = tr.querySelectorAll('th,td');
+    if (cells.length > 0 && (cells[cells.length-1].textContent.toLowerCase().includes('aksi') || cells[cells.length-1].innerHTML.includes('button'))) cells[cells.length-1].remove();
+  });
+  const wb = XLSX.utils.table_to_book(clone, { sheet: 'Sheet1' });
+  XLSX.writeFile(wb, `${filename}_${today()}.xlsx`);
+}
+function exportBukuBesar() {
+  const periode = document.getElementById('bbPeriode')?.value || currentMonth();
+  const akunFilter = document.getElementById('bbAkun')?.value || '';
+  const rows = [['Kode Akun','Nama Akun','Tanggal','Keterangan','Debit','Kredit','Saldo']];
+  const grouped = {};
+  getJurnalPeriode(periode).forEach(j => {
+    if (akunFilter && j.akun !== akunFilter) return;
+    if (!grouped[j.akun]) grouped[j.akun] = { nama: j.akunNama, items: [] };
+    grouped[j.akun].items.push(j);
+  });
+  Object.keys(grouped).sort().forEach(kode => {
+    const g = grouped[kode];
+    let saldo = 0;
+    g.items.forEach(i => {
+      saldo += i.debit - i.kredit;
+      rows.push([kode, g.nama, i.tanggal, i.keterangan, i.debit, i.kredit, saldo]);
+    });
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'BukuBesar');
+  XLSX.writeFile(wb, `buku-besar_${periode}.xlsx`);
+}
+function exportLapPenjualan() {
+  const dari = document.getElementById('lapJualDari').value || '0000-01-01';
+  const sampai = document.getElementById('lapJualSampai').value || '9999-12-31';
+  const rows = [['LAPORAN PENJUALAN'], [`Periode: ${dari} s/d ${sampai}`], [], ['Tanggal','No Invoice','Customer','Supplier','Produk','Qty','H.Jual','H.Beli','Total Jual','Total Beli','Laba']];
+  getInvoiceLines(dari, sampai).forEach(l => {
+    rows.push([l.tgl, l.invNo, l.customer, l.supplier, l.produkNama, l.qty, l.hargaJual, l.hargaBeli, l.subtotalJual, l.subtotalBeli, l.laba]);
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Penjualan');
+  XLSX.writeFile(wb, `laporan-penjualan_${dari}_${sampai}.xlsx`);
+}
+function exportNeraca() {
+  const periode = document.getElementById('neracaPeriode')?.value || currentMonth();
+  const rows = [['NERACA PT PKP'], [`Periode: ${periodLabel(periode)}`], []];
+  const data = getNeracaData(periode);
+  rows.push(['ASET', '', 'KEWAJIBAN & EKUITAS', '']);
+  data.aset.forEach(a => rows.push([a.nama, a.nilai, '', '']));
+  data.kewajiban.forEach(k => rows.push(['', '', k.nama, k.nilai]));
+  data.ekuitas.forEach(e => rows.push(['', '', e.nama, e.nilai]));
+  rows.push(['Total Aset', data.totalAset, 'Total Kewajiban + Ekuitas', data.totalPasiva]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Neraca');
+  XLSX.writeFile(wb, `neraca_${periode}.xlsx`);
+}
+function exportAuditLog() {
+  const rows = [['AUDIT LOG'], [`Export: ${nowISO()}`], [], ['Waktu','Aksi','User','Detail','Sebelum','Sesudah']];
+  DB.auditLog.forEach(a => rows.push([a.waktu, a.aksi, a.user, a.detail, a.sebelum, a.sesudah]));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'AuditLog');
+  XLSX.writeFile(wb, `audit-log_${today()}.xlsx`);
+}
+
+/* =========================================================
+   MASTER
+   ========================================================= */
+function addCustomer() {
+  const nama = document.getElementById('custNama').value.trim();
+  const alamat = document.getElementById('custAlamat').value.trim();
+  if (!nama) return alert('Nama wajib diisi');
+  if (!alamat) return alert('Alamat wajib diisi');
+  DB.counter.cust++;
+  const newCust = { kode: 'C' + String(DB.counter.cust).padStart(3,'0'), nama, alamat, npwp: document.getElementById('custNPWP').value.trim() || '-', status: 'Non-PKP' };
+  DB.customers.push(newCust);
+  logAudit('MASTER DATA', `Tambah Customer: ${newCust.kode} - ${nama}`, '-', `Alamat: ${alamat}`);
+  document.getElementById('custNama').value = '';
+  document.getElementById('custAlamat').value = '';
+  document.getElementById('custNPWP').value = '';
+  closeModal('modalCustomer'); renderAll();
+}
+function addSupplier() {
+  const nama = document.getElementById('supNama').value.trim();
+  const alamat = document.getElementById('supAlamat').value.trim();
+  if (!nama) return alert('Nama wajib diisi');
+  if (!alamat) return alert('Alamat wajib diisi');
+  DB.counter.sup++;
+  const newSup = { kode: 'S' + String(DB.counter.sup).padStart(3,'0'), nama, alamat, npwp: document.getElementById('supNPWP').value.trim() || '-', status: 'PKP' };
+  DB.suppliers.push(newSup);
+  logAudit('MASTER DATA', `Tambah Supplier: ${newSup.kode} - ${nama}`, '-', `Alamat: ${alamat}`);
+  document.getElementById('supNama').value = '';
+  document.getElementById('supAlamat').value = '';
+  document.getElementById('supNPWP').value = '';
+  closeModal('modalSupplier'); renderAll();
+}
+function addProduk() {
+  const nama = document.getElementById('prodNama').value.trim();
+  if (!nama) return alert('Nama wajib');
+  DB.counter.prod++;
+  const newProd = { kode: 'P' + String(DB.counter.prod).padStart(3,'0'), nama, satuan: document.getElementById('prodSatuan').value || 'pcs' };
+  DB.products.push(newProd);
+  logAudit('MASTER DATA', `Tambah Produk: ${newProd.kode} - ${nama}`, '-', `Satuan: ${newProd.satuan}`);
+  document.getElementById('prodNama').value = '';
+  document.getElementById('prodSatuan').value = '';
+  closeModal('modalProduk'); renderAll();
+}
+
+/* =========================================================
+   SO
+   ========================================================= */
+let editingSO = null;
+function addSOLine(item = null) {
+  const tbody = document.getElementById('soLines');
+  const tr = document.createElement('tr');
+  tr.className = 'line-row border-b';
+  const prodOptions = DB.products.map(p => `<option value="${p.kode}" ${item && item.produkKode === p.kode ? 'selected' : ''}>${p.nama}</option>`).join('');
+  tr.innerHTML = `
+    <td class="p-1"><select class="border rounded p-1 w-full text-xs produk-select" onchange="calcSOTotal()">${prodOptions}</select></td>
+    <td class="p-1"><input type="number" class="border rounded p-1 w-full text-xs text-right qty" value="${item ? item.qty : 1}" min="1" oninput="calcSOTotal()"></td>
+    <td class="p-1"><input type="number" class="border rounded p-1 w-full text-xs text-right hargaBeli" value="${item ? item.hargaBeli : 0}" min="0" oninput="calcSOTotal()"></td>
+    <td class="p-1"><input type="number" class="border rounded p-1 w-full text-xs text-right hargaJual" value="${item ? item.hargaJual : 0}" min="0" oninput="calcSOTotal()"></td>
+    <td class="p-1 text-right text-xs subtotalBeli text-orange-700">Rp 0</td>
+    <td class="p-1 text-right text-xs subtotalJual text-blue-700">Rp 0</td>
+    <td class="p-1 text-right text-xs laba text-green-700">Rp 0</td>
+    <td class="p-1 text-center"><button onclick="this.closest('tr').remove(); calcSOTotal()" class="text-red-500 text-xs">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+  calcSOTotal();
+}
+function calcSOTotal() {
+  let totalBeli = 0, totalJual = 0;
+  document.querySelectorAll('#soLines tr').forEach(tr => {
+    const qty = parseFloat(tr.querySelector('.qty')?.value) || 0;
+    const hb = parseFloat(tr.querySelector('.hargaBeli')?.value) || 0;
+    const hj = parseFloat(tr.querySelector('.hargaJual')?.value) || 0;
+    const subB = qty * hb, subJ = qty * hj;
+    tr.querySelector('.subtotalBeli').textContent = fmt(subB);
+    tr.querySelector('.subtotalJual').textContent = fmt(subJ);
+    tr.querySelector('.laba').textContent = fmt(subJ - subB);
+    totalBeli += subB; totalJual += subJ;
+  });
+  document.getElementById('soTotalBeli').textContent = fmt(totalBeli);
+  document.getElementById('soTotalJual').textContent = fmt(totalJual);
+  document.getElementById('soTotalLaba').textContent = fmt(totalJual - totalBeli);
+  return { totalBeli, totalJual, totalLaba: totalJual - totalBeli };
+}
+function openCreateSO() { editingSO = null; openModal('modalSO'); }
+function openEditSO(soNo) {
+  const so = DB.so.find(s => s.no === soNo);
+  if (!so) return;
+  if (so.status === 'CLOSED') return alert('SO yang sudah di-invoice tidak bisa diedit.');
+  editingSO = soNo;
+  document.getElementById('soModalTitle').textContent = `Edit SO ${so.no}`;
+  document.getElementById('soSaveBtn').textContent = 'Update SO';
+  document.getElementById('soCustomer').innerHTML = DB.customers.map(c => `<option value="${c.kode}" ${c.kode === so.customerKode ? 'selected' : ''}>${c.nama}</option>`).join('');
+  document.getElementById('soSupplier').innerHTML = DB.suppliers.map(s => `<option value="${s.kode}" ${s.kode === so.supplierKode ? 'selected' : ''}>${s.nama}</option>`).join('');
+  document.getElementById('soTanggal').value = so.tanggal;
+  document.getElementById('soPoCustomer').value = so.poCustomer || '';
+  document.getElementById('soLines').innerHTML = '';
+  so.items.forEach(item => addSOLine(item));
+  document.getElementById('modalSO').classList.add('active');
+}
+function saveSO() {
+  const custKode = document.getElementById('soCustomer').value;
+  const supKode = document.getElementById('soSupplier').value;
+  const tgl = document.getElementById('soTanggal').value || today();
+  const poCustomer = document.getElementById('soPoCustomer').value.trim();
+  const items = [];
+  document.querySelectorAll('#soLines tr').forEach(tr => {
+    const prodKode = tr.querySelector('.produk-select').value;
+    const qty = parseFloat(tr.querySelector('.qty').value) || 0;
+    const hargaBeli = parseFloat(tr.querySelector('.hargaBeli').value) || 0;
+    const hargaJual = parseFloat(tr.querySelector('.hargaJual').value) || 0;
+    if (prodKode && qty > 0 && hargaBeli > 0 && hargaJual > 0) {
+      const prod = DB.products.find(p => p.kode === prodKode);
+      items.push({ produkKode: prodKode, produkNama: prod.nama, satuan: prod.satuan, qty, hargaBeli, hargaJual, subtotalBeli: qty * hargaBeli, subtotalJual: qty * hargaJual, laba: qty * (hargaJual - hargaBeli) });
+    }
+  });
+  if (!custKode || !supKode || items.length === 0) return alert('Pilih customer, supplier, dan minimal 1 item');
+  const cust = DB.customers.find(c => c.kode === custKode);
+  const sup = DB.suppliers.find(s => s.kode === supKode);
+  const totalBeli = items.reduce((s,i) => s + i.subtotalBeli, 0);
+  const totalJual = items.reduce((s,i) => s + i.subtotalJual, 0);
+  if (editingSO) {
+    const so = DB.so.find(s => s.no === editingSO);
+    const oldDetail = `Customer: ${so.customerNama}, Total: ${fmt(so.totalJual)}`;
+    so.poCustomer = poCustomer || null;
+    so.tanggal = tgl;
+    so.customerKode = custKode; so.customerNama = cust.nama;
+    so.supplierKode = supKode; so.supplierNama = sup.nama;
+    so.items = items;
+    so.totalBeli = totalBeli; so.totalJual = totalJual; so.totalLaba = totalJual - totalBeli;
+    so.totalItem = items.length;
+    logAudit('SO DIUBAH', `SO ${so.no}`, oldDetail, `Customer: ${cust.nama}, Total: ${fmt(totalJual)}`);
+    alert(`✅ SO ${so.no} berhasil diupdate.`);
+  } else {
+    DB.counter.so++;
+    const soNo = 'SO' + String(DB.counter.so).padStart(4,'0');
+    DB.so.push({ no: soNo, poCustomer: poCustomer || null, tanggal: tgl, customerKode: custKode, customerNama: cust.nama, supplierKode: supKode, supplierNama: sup.nama, items, totalBeli, totalJual, totalLaba: totalJual - totalBeli, totalItem: items.length, status: 'OPEN' });
+    logAudit('SO DIBUAT', `SO ${soNo}`, '-', `Customer: ${cust.nama}, Total: ${fmt(totalJual)}`);
+    alert(`✅ SO ${soNo} berhasil dibuat.`);
+  }
+  editingSO = null;
+  closeModal('modalSO');
+  renderAll();
+}
+function deleteSO(soNo) {
+  const so = DB.so.find(s => s.no === soNo);
+  if (!so) return;
+  if (so.status === 'CLOSED') return alert('SO yang sudah di-invoice tidak bisa dihapus.');
+  showConfirm('🗑 Hapus Sales Order?', `Hapus <strong>${so.no}</strong>?<br>Customer: ${so.customerNama}<br>Total: ${fmt(so.totalJual)}`, 'Ya, Hapus', () => {
+    const idx = DB.so.findIndex(s => s.no === soNo);
+    DB.so.splice(idx, 1);
+    logAudit('SO DIHAPUS', `SO ${soNo}`, `${so.customerNama}, ${fmt(so.totalJual)}`, '-');
+    renderAll();
+  });
+}
+
+/* =========================================================
+   INVOICE
+   ========================================================= */
+function createInvoiceFromSO(soNo) {
+  const so = DB.so.find(s => s.no === soNo);
+  if (!so) return alert('SO tidak ditemukan');
+  if (so.status === 'CLOSED') return alert('SO ini sudah di-invoice-kan');
+  DB.counter.inv++;
+  const tgl = today();
+  const invNo = 'INV' + String(DB.counter.inv).padStart(4,'0');
+  const penjualan = so.totalJual, hpp = so.totalBeli;
+  postJurnal(tgl, `Pembelian untuk ${so.no} (Supplier: ${so.supplierNama})`, [
+    { akun: '501', nama: 'Harga Pokok Penjualan (HPP)', debit: hpp, kredit: 0 },
+    { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: hpp },
+  ]);
+  postJurnal(tgl, `Penjualan ${so.no} - ${so.customerNama}`, [
+    { akun: '101', nama: 'Kas / Bank', debit: penjualan, kredit: 0 },
+    { akun: '401', nama: 'Penjualan', debit: 0, kredit: penjualan },
+  ]);
+  const inv = { no: invNo, tanggal: tgl, soNo: so.no, poCustomer: so.poCustomer, customerNama: so.customerNama, supplierNama: so.supplierNama, items: so.items.map(i => ({ ...i })), penjualan, hpp, laba: penjualan - hpp, fakturPajak: null };
+  DB.invoice.push(inv);
+  so.status = 'CLOSED';
+  logAudit('INVOICE DIBUAT', `${invNo} dari ${so.no}`, '-', `Penjualan: ${fmt(penjualan)}, HPP: ${fmt(hpp)}`);
+  renderAll();
+  return inv;
+}
+function buatInvoice(soNo) {
+  const inv = createInvoiceFromSO(soNo);
+  if (inv) alert(`✅ Invoice ${inv.no} dibuat.\n\nPenjualan: ${fmt(inv.penjualan)}\nHPP: ${fmt(inv.hpp)}\nLaba: ${fmt(inv.laba)}`);
+}
+function deleteInvoice(invNo) {
+  const inv = DB.invoice.find(i => i.no === invNo);
+  if (!inv) return;
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  const so = DB.so.find(s => s.no === inv.soNo);
+  showConfirm('🗑 Hapus Invoice?', `Hapus <strong>${inv.no}</strong>?<br>Customer: ${inv.customerNama}<br>Penjualan: ${fmt(inv.penjualan)}<br>HPP: ${fmt(inv.hpp)}<br>${so ? `SO ${so.no} kembali OPEN` : ''}<br><br><span class="text-orange-600">Jurnal terkait akan dihapus.</span>`, 'Ya, Hapus', () => { executeDeleteInvoice(invNo); });
+}
+function executeDeleteInvoice(invNo) {
+  const inv = DB.invoice.find(i => i.no === invNo);
+  if (!inv) return;
+  const soNo = inv.soNo;
+  const jurnalToRemove = DB.jurnal.filter(j => j.keterangan.includes(`${soNo}`) || j.keterangan.includes(inv.no));
+  jurnalToRemove.forEach(j => { DB.saldo[j.akun] = (DB.saldo[j.akun] || 0) - (j.debit - j.kredit); });
+  DB.jurnal = DB.jurnal.filter(j => !jurnalToRemove.includes(j));
+  const so = DB.so.find(s => s.no === soNo);
+  if (so) so.status = 'OPEN';
+  const idx = DB.invoice.findIndex(i => i.no === invNo);
+  DB.invoice.splice(idx, 1);
+  selectedInvoices.delete(invNo);
+  updateInvoiceSelectionUI();
+  logAudit('INVOICE DIHAPUS', `Hapus ${invNo}`, `Penjualan: ${fmt(inv.penjualan)}`, `SO ${soNo} OPEN`);
+  renderAll();
+}
+function deleteSelectedInvoices() {
+  if (selectedInvoices.size === 0) return alert('Pilih minimal 1 invoice');
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  const count = selectedInvoices.size;
+  const invNos = Array.from(selectedInvoices);
+  showConfirm('🗑 Hapus Invoice Terpilih?', `Hapus <strong>${count} invoice</strong>?<br><br>Semua jurnal terkait akan dihapus, SO kembali OPEN.`, `Ya, Hapus ${count}`, () => {
+    invNos.forEach(invNo => executeDeleteInvoice(invNo));
+    selectedInvoices.clear();
+    updateInvoiceSelectionUI();
+    renderAll();
+  });
+}
+
+/* =========================================================
+   BEBAN OPERASIONAL (CRUD)
+   ========================================================= */
+let editingBeban = null;
+function openModalBeban(bebanNo = null) {
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  const bebanAccounts = DB.coa.filter(c => c.tipe === 'Beban Operasional' || c.tipe === 'Beban Lain');
+  document.getElementById('bebanJenis').innerHTML = bebanAccounts.map(c => `<option value="${c.kode}">${c.kode} - ${c.nama}</option>`).join('');
+  if (bebanNo) {
+    const b = DB.beban.find(x => x.no === bebanNo);
+    if (!b) return;
+    editingBeban = bebanNo;
+    document.getElementById('bebanModalTitle').textContent = `✏ Edit Beban ${b.no}`;
+    document.getElementById('bebanTanggal').value = b.tanggal;
+    document.getElementById('bebanJenis').value = b.akunKode;
+    document.getElementById('bebanKeterangan').value = b.keterangan;
+    document.getElementById('bebanJumlah').value = b.jumlah;
+  } else {
+    editingBeban = null;
+    document.getElementById('bebanModalTitle').textContent = '💸 Tambah Beban Operasional';
+    document.getElementById('bebanTanggal').value = today();
+    document.getElementById('bebanKeterangan').value = '';
+    document.getElementById('bebanJumlah').value = '';
+  }
+  document.getElementById('modalBeban').classList.add('active');
+}
+function saveBeban() {
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  const tgl = document.getElementById('bebanTanggal').value || today();
+  const jenisKode = document.getElementById('bebanJenis').value;
+  const keterangan = document.getElementById('bebanKeterangan').value.trim();
+  const jumlah = parseFloat(document.getElementById('bebanJumlah').value) || 0;
+  if (!keterangan) return alert('Keterangan wajib');
+  if (jumlah <= 0) return alert('Jumlah harus > 0');
+  const akun = DB.coa.find(c => c.kode === jenisKode);
+  
+  if (editingBeban) {
+    // === EDIT ===
+    const b = DB.beban.find(x => x.no === editingBeban);
+    const oldData = `Jenis: ${b.akunNama}, Jumlah: ${fmt(b.jumlah)}, Ket: ${b.keterangan}`;
+    // Hapus jurnal lama
+    const jurnalLama = DB.jurnal.filter(j => j.keterangan.startsWith(`Beban ${b.akunNama} - ${b.keterangan}`));
+    jurnalLama.forEach(j => { DB.saldo[j.akun] = (DB.saldo[j.akun] || 0) - (j.debit - j.kredit); });
+    DB.jurnal = DB.jurnal.filter(j => !jurnalLama.includes(j));
+    // Update beban
+    b.tanggal = tgl;
+    b.akunKode = jenisKode;
+    b.akunNama = akun.nama;
+    b.keterangan = keterangan;
+    b.jumlah = jumlah;
+    // Buat jurnal baru
+    postJurnal(tgl, `Beban ${akun.nama} - ${keterangan}`, [
+      { akun: akun.kode, nama: akun.nama, debit: jumlah, kredit: 0 },
+      { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: jumlah },
+    ]);
+    logAudit('BEBAN DIUBAH', `${b.no}`, oldData, `Jenis: ${akun.nama}, Jumlah: ${fmt(jumlah)}`);
+    alert(`✅ Beban ${b.no} berhasil diupdate.`);
+  } else {
+    // === CREATE ===
+    DB.counter.beban++;
+    const bebanNo = 'BBN' + String(DB.counter.beban).padStart(4,'0');
+    postJurnal(tgl, `Beban ${akun.nama} - ${keterangan}`, [
+      { akun: akun.kode, nama: akun.nama, debit: jumlah, kredit: 0 },
+      { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: jumlah },
+    ]);
+    DB.beban.push({ no: bebanNo, tanggal: tgl, akunKode: akun.kode, akunNama: akun.nama, keterangan, jumlah });
+    logAudit('BEBAN DIBUAT', `${bebanNo} - ${akun.nama}`, '-', `Ket: ${keterangan}, Jumlah: ${fmt(jumlah)}`);
+    alert(`✅ Beban berhasil dicatat.`);
+  }
+  editingBeban = null;
+  closeModal('modalBeban');
+  renderAll();
+}
+function deleteBeban(bebanNo) {
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  const beban = DB.beban.find(b => b.no === bebanNo);
+  if (!beban) return;
+  showConfirm('🗑 Hapus Beban?', `Hapus <strong>${beban.no}</strong>?<br><br>${beban.akunNama}<br>${beban.keterangan}<br>Jumlah: ${fmt(beban.jumlah)}<br><br><span class="text-red-600">Jurnal terkait akan dihapus.</span>`, 'Ya, Hapus', () => {
+    const jurnalToRemove = DB.jurnal.filter(j => j.keterangan.startsWith(`Beban ${beban.akunNama} - ${beban.keterangan}`));
+    jurnalToRemove.forEach(j => { DB.saldo[j.akun] = (DB.saldo[j.akun] || 0) - (j.debit - j.kredit); });
+    DB.jurnal = DB.jurnal.filter(j => !jurnalToRemove.includes(j));
+    const idx = DB.beban.findIndex(b => b.no === bebanNo);
+    DB.beban.splice(idx, 1);
+    logAudit('BEBAN DIHAPUS', `Hapus ${bebanNo}`, `${beban.akunNama}, ${fmt(beban.jumlah)}`, '-');
+    renderAll();
+  });
+}
+
+/* =========================================================
+   ASET TETAP (CRUD)
+   ========================================================= */
+let editingAset = null;
+function openModalAset(asetNo = null) {
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  ['asetHarga','asetUmur','asetKategori'].forEach(id => {
+    document.getElementById(id).oninput = updateAsetPreview;
+    document.getElementById(id).onchange = updateAsetPreview;
+  });
+  if (asetNo) {
+    const a = DB.aset.find(x => x.no === asetNo);
+    if (!a) return;
+    if (a.totalPenyusutan > 0) return alert(`⚠️ Aset ini sudah disusutkan ${fmt(a.totalPenyusutan)}.\n\nTidak bisa diedit. Buat jurnal koreksi jika perlu.`);
+    editingAset = asetNo;
+    document.getElementById('asetModalTitle').textContent = `✏ Edit Aset ${a.no}`;
+    document.getElementById('asetTanggal').value = a.tanggal;
+    document.getElementById('asetKategori').value = a.kategori;
+    document.getElementById('asetNama').value = a.nama;
+    document.getElementById('asetHarga').value = a.harga;
+    document.getElementById('asetUmur').value = a.umur;
+    document.getElementById('asetKeterangan').value = a.keterangan || '';
+  } else {
+    editingAset = null;
+    document.getElementById('asetModalTitle').textContent = '🏢 Tambah Aset Tetap';
+    document.getElementById('asetTanggal').value = today();
+    document.getElementById('asetNama').value = '';
+    document.getElementById('asetHarga').value = '';
+    document.getElementById('asetKeterangan').value = '';
+    document.getElementById('asetUmur').value = '4';
+    document.getElementById('asetPreview').classList.add('hidden');
+  }
+  updateAsetPreview();
+  document.getElementById('modalAset').classList.add('active');
+}
+function updateAsetPreview() {
+  const harga = parseFloat(document.getElementById('asetHarga').value) || 0;
+  const umur = parseInt(document.getElementById('asetUmur').value) || 4;
+  if (harga <= 0) { document.getElementById('asetPreview').classList.add('hidden'); return; }
+  const penyusutanBulanan = harga / (umur * 12);
+  document.getElementById('asetPreviewContent').innerHTML = `
+    <div class="flex justify-between"><span>Harga Perolehan:</span><span class="font-semibold">${fmt(harga)}</span></div>
+    <div class="flex justify-between"><span>Umur Ekonomis:</span><span class="font-semibold">${umur} tahun</span></div>
+    <div class="flex justify-between border-t border-slate-200 mt-1 pt-1"><span>Penyusutan per Bulan:</span><span class="font-bold text-orange-700">${fmt(penyusutanBulanan)}</span></div>
+  `;
+  document.getElementById('asetPreview').classList.remove('hidden');
+}
+function getAkunAset(kategori) {
+  const mapping = {
+    '121':  { aset: '121',  akum: '122',  asetNama: 'Peralatan', akumNama: 'Akumulasi Penyusutan Peralatan' },
+    '121A': { aset: '121A', akum: '122A', asetNama: 'Komputer & Laptop', akumNama: 'Akum. Penyusutan Komputer & Laptop' },
+    '121B': { aset: '121B', akum: '122B', asetNama: 'Kendaraan', akumNama: 'Akum. Penyusutan Kendaraan' },
+    '121C': { aset: '121C', akum: '122C', asetNama: 'Furnitur', akumNama: 'Akum. Penyusutan Furnitur' },
+  };
+  return mapping[kategori] || mapping['121'];
+}
+function saveAset() {
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  const tgl = document.getElementById('asetTanggal').value || today();
+  const kategori = document.getElementById('asetKategori').value;
+  const nama = document.getElementById('asetNama').value.trim();
+  const harga = parseFloat(document.getElementById('asetHarga').value) || 0;
+  const umur = parseInt(document.getElementById('asetUmur').value) || 4;
+  const keterangan = document.getElementById('asetKeterangan').value.trim();
+  if (!nama) return alert('Nama wajib');
+  if (harga <= 0) return alert('Harga harus > 0');
+  const akun = getAkunAset(kategori);
+  const penyusutanBulanan = harga / (umur * 12);
+
+  if (editingAset) {
+    // === EDIT ===
+    const a = DB.aset.find(x => x.no === editingAset);
+    const oldData = `${a.nama}, Harga: ${fmt(a.harga)}`;
+    const jurnalLama = DB.jurnal.filter(j => j.keterangan.includes(`Perolehan Aset ${a.no}`));
+    jurnalLama.forEach(j => { DB.saldo[j.akun] = (DB.saldo[j.akun] || 0) - (j.debit - j.kredit); });
+    DB.jurnal = DB.jurnal.filter(j => !jurnalLama.includes(j));
+    a.tanggal = tgl; a.kategori = kategori; a.nama = nama; a.harga = harga; a.umur = umur;
+    a.penyusutanBulanan = penyusutanBulanan; a.keterangan = keterangan;
+    a.akunAset = akun.aset; a.akunAsetNama = akun.asetNama;
+    a.akunAkum = akun.akum; a.akunAkumNama = akun.akumNama;
+    postJurnal(tgl, `Perolehan Aset ${a.no} - ${nama}`, [
+      { akun: akun.aset, nama: akun.asetNama, debit: harga, kredit: 0 },
+      { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: harga },
+    ]);
+    logAudit('ASET DIUBAH', `${a.no}`, oldData, `${nama}, Harga: ${fmt(harga)}`);
+    alert(`✅ Aset ${a.no} berhasil diupdate.`);
+  } else {
+    DB.counter.aset++;
+    const asetNo = 'AST' + String(DB.counter.aset).padStart(4,'0');
+    postJurnal(tgl, `Perolehan Aset ${asetNo} - ${nama}`, [
+      { akun: akun.aset, nama: akun.asetNama, debit: harga, kredit: 0 },
+      { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: harga },
+    ]);
+    DB.aset.push({
+      no: asetNo, tanggal: tgl, kategori, nama, harga, umur,
+      penyusutanBulanan, akumulasi: 0, keterangan,
+      akunAset: akun.aset, akunAsetNama: akun.asetNama,
+      akunAkum: akun.akum, akunAkumNama: akun.akumNama,
+      lastPenyusutan: null, totalPenyusutan: 0,
+    });
+    logAudit('ASET DIBUAT', `${asetNo} - ${nama}`, '-', `Harga: ${fmt(harga)}, Peny/Bln: ${fmt(penyusutanBulanan)}`);
+    alert(`✅ Aset ${asetNo} berhasil dicatat.`);
+  }
+  editingAset = null;
+  closeModal('modalAset');
+  renderAll();
+}
+function deleteAset(asetNo) {
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  const aset = DB.aset.find(a => a.no === asetNo);
+  if (!aset) return;
+  if (aset.totalPenyusutan > 0) {
+    return alert(`⚠️ Aset ini sudah disusutkan ${fmt(aset.totalPenyusutan)}.\n\nTidak bisa dihapus langsung. Buat jurnal koreksi jika perlu.`);
+  }
+  showConfirm('🗑 Hapus Aset?', `Hapus <strong>${aset.no} - ${aset.nama}</strong>?<br>Harga: ${fmt(aset.harga)}<br><br><span class="text-red-600">Jurnal perolehan akan dihapus.</span>`, 'Ya, Hapus', () => {
+    const jurnalToRemove = DB.jurnal.filter(j => j.keterangan.includes(`Perolehan Aset ${aset.no}`));
+    jurnalToRemove.forEach(j => { DB.saldo[j.akun] = (DB.saldo[j.akun] || 0) - (j.debit - j.kredit); });
+    DB.jurnal = DB.jurnal.filter(j => !jurnalToRemove.includes(j));
+    const idx = DB.aset.findIndex(a => a.no === asetNo);
+    DB.aset.splice(idx, 1);
+    logAudit('ASET DIHAPUS', `Hapus ${asetNo}`, `${aset.nama}, ${fmt(aset.harga)}`, '-');
+    renderAll();
+  });
+}
+
+/* PENYUSUTAN */
+function prosesPenyusutan() {
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  const bulanIni = currentMonth();
+  if (DB.aset.length === 0) return alert('Belum ada aset.');
+  const sudahProses = DB.penyusutanLog.some(p => p.periode === bulanIni);
+  if (sudahProses) return alert(`⚠️ Penyusutan bulan ${periodLabel(bulanIni)} sudah diproses.\n\nTidak bisa dijalankan ulang.`);
+  const asetPerluSusut = DB.aset.filter(a => {
+    if (a.totalPenyusutan >= a.harga - 1) return false;
+    if (bulanIni < a.tanggal.slice(0, 7)) return false;
+    if (a.lastPenyusutan === bulanIni) return false;
+    return true;
+  });
+  if (asetPerluSusut.length === 0) return alert('Tidak ada aset yang perlu disusutkan bulan ini.');
+  let totalPenyusutan = 0;
+  let preview = '<div class="space-y-1">';
+  asetPerluSusut.forEach(a => {
+    let susut = a.penyusutanBulanan;
+    const sisa = a.harga - a.totalPenyusutan;
+    if (susut > sisa) susut = sisa;
+    totalPenyusutan += susut;
+    preview += `<div class="flex justify-between text-xs"><span>${a.nama}</span><span>${fmt(susut)}</span></div>`;
+  });
+  preview += '</div>';
+  showConfirm('⚙ Proses Penyusutan Otomatis', `Susutkan <strong>${asetPerluSusut.length} aset</strong> untuk <strong>${periodLabel(bulanIni)}</strong>.<br><br>${preview}<br><strong>Total: ${fmt(totalPenyusutan)}</strong>`, 'Ya, Proses', () => {
+    const perAkun = {};
+    asetPerluSusut.forEach(a => {
+      let susut = a.penyusutanBulanan;
+      const sisa = a.harga - a.totalPenyusutan;
+      if (susut > sisa) susut = sisa;
+      if (!perAkun[a.akunAkum]) perAkun[a.akunAkum] = { nama: a.akunAkumNama, total: 0 };
+      perAkun[a.akunAkum].total += susut;
+      a.totalPenyusutan += susut;
+      a.lastPenyusutan = bulanIni;
+      a.akumulasi = a.totalPenyusutan;
+    });
+    const lines = [{ akun: '606', nama: 'Beban Penyusutan', debit: totalPenyusutan, kredit: 0 }];
+    Object.keys(perAkun).forEach(k => lines.push({ akun: k, nama: perAkun[k].nama, debit: 0, kredit: perAkun[k].total }));
+    postJurnal(today(), `Penyusutan Bulan ${periodLabel(bulanIni)}`, lines);
+    DB.penyusutanLog.push({ periode: bulanIni, tanggal: today(), totalAset: asetPerluSusut.length, totalPenyusutan });
+    logAudit('PENYUSUTAN', `Penyusutan ${periodLabel(bulanIni)}`, '-', `${asetPerluSusut.length} aset, Total: ${fmt(totalPenyusutan)}`);
+    renderAll();
+    alert(`✅ Penyusutan ${periodLabel(bulanIni)} berhasil!\n\nTotal: ${fmt(totalPenyusutan)}`);
+  });
+}
+
+/* =========================================================
+   FAKTUR PAJAK
+   ========================================================= */
+let currentFakturInvNo = null;
+function openFakturModal(invNo) {
+  const inv = DB.invoice.find(i => i.no === invNo);
+  if (!inv) return;
+  currentFakturInvNo = invNo;
+  document.getElementById('fakturInfo').innerHTML = `
+    <div><strong>${inv.no}</strong> — ${inv.customerNama}</div>
+    <div>Nilai Invoice: <strong>${fmt(inv.penjualan)}</strong></div>
+    ${inv.fakturPajak ? '<div class="text-green-600 mt-1">✓ Sudah terpasang</div>' : ''}
+  `;
+  if (inv.fakturPajak) {
+    document.getElementById('fakturNomor').value = inv.fakturPajak.nomor;
+    document.getElementById('fakturPembulatan').value = inv.fakturPajak.pembulatan;
+  } else {
+    const n = String(DB.invoice.indexOf(inv) + 1).padStart(8, '0');
+    document.getElementById('fakturNomor').value = `010.000-26.${n}`;
+    document.getElementById('fakturPembulatan').value = 0;
+  }
+  previewFakturPembulatan();
+  document.getElementById('modalFakturPajak').classList.add('active');
+}
+function previewFakturPembulatan() {
+  const inv = DB.invoice.find(i => i.no === currentFakturInvNo);
+  if (!inv) return;
+  const sebelum = inv.fakturPajak ? inv.fakturPajak.penjualanAsli : inv.penjualan;
+  const pembulatan = parseFloat(document.getElementById('fakturPembulatan').value) || 0;
+  const sesudah = sebelum + pembulatan;
+  document.getElementById('fakturSebelum').textContent = fmt(sebelum);
+  document.getElementById('fakturDelta').textContent = (pembulatan >= 0 ? '+' : '') + fmt(pembulatan);
+  document.getElementById('fakturSesudah').textContent = fmt(sesudah);
+}
+function saveFakturPajak() {
+  const inv = DB.invoice.find(i => i.no === currentFakturInvNo);
+  if (!inv) return;
+  const nomor = document.getElementById('fakturNomor').value.trim();
+  if (!nomor) return alert('Nomor faktur wajib');
+  const pembulatan = parseFloat(document.getElementById('fakturPembulatan').value) || 0;
+  const penjualanAsli = inv.fakturPajak ? inv.fakturPajak.penjualanAsli : inv.penjualan;
+  const penjualanBaru = penjualanAsli + pembulatan;
+  if (penjualanBaru <= 0) return alert('Nilai tidak boleh ≤ 0');
+  inv.fakturPajak = { nomor, pembulatan, penjualanAsli, penjualanSetelah: penjualanBaru, tglPasang: today() };
+  const delta = penjualanBaru - inv.penjualan;
+  if (delta !== 0) {
+    postJurnal(today(), `Penyesuaian pembulatan ${inv.no}`, [
+      { akun: '101', nama: 'Kas / Bank', debit: delta, kredit: 0 },
+      { akun: '401', nama: 'Penjualan', debit: 0, kredit: delta },
+    ]);
+    inv.penjualan = penjualanBaru;
+    inv.laba = inv.penjualan - inv.hpp;
+  }
+  logAudit('FAKTUR PAJAK', `${inv.no} — ${nomor}`, '-', `Pembulatan: ${pembulatan}`);
+  closeModal('modalFakturPajak');
+  renderAll();
+  alert(`✅ Faktur pajak berhasil.`);
+}
+
+/* =========================================================
+   INVOICE PRINT/PDF
+   ========================================================= */
+function generateInvoiceHTML(invNo) {
+  const inv = DB.invoice.find(i => i.no === invNo);
+  if (!inv) return '';
+  const cust = DB.customers.find(c => c.nama === inv.customerNama) || { alamat: '-', npwp: '-' };
+  const terbilang = (n) => {
+    const satuan = ['','Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan','Sepuluh','Sebelas'];
+    const bil = (x) => {
+      x = Math.floor(x);
+      if (x < 12) return satuan[x];
+      if (x < 20) return bil(x-10) + ' Belas';
+      if (x < 100) return bil(Math.floor(x/10)) + ' Puluh ' + bil(x%10);
+      if (x < 200) return 'Seratus ' + bil(x-100);
+      if (x < 1000) return bil(Math.floor(x/100)) + ' Ratus ' + bil(x%100);
+      if (x < 2000) return 'Seribu ' + bil(x-1000);
+      if (x < 1000000) return bil(Math.floor(x/1000)) + ' Ribu ' + bil(x%1000);
+      if (x < 1000000000) return bil(Math.floor(x/1000000)) + ' Juta ' + bil(x%1000000);
+      return bil(Math.floor(x/1000000000)) + ' Miliar ' + bil(x%1000000000);
+    };
+    return (bil(n) || 'Nol') + ' Rupiah';
+  };
+  const rows = inv.items.map((i, idx) => `<tr><td style="text-align:center">${idx+1}</td><td>${i.produkNama}</td><td style="text-align:right">${fmtNum(i.qty)}</td><td style="text-align:right">${fmtNum(i.hargaJual)}</td><td style="text-align:right">${fmtNum(i.subtotalJual)}</td></tr>`).join('');
+  const fpRow = inv.fakturPajak ? `<div style="font-size:9px;margin-bottom:12px"><strong>Faktur Pajak:</strong> ${inv.fakturPajak.nomor}<br>${inv.fakturPajak.pembulatan !== 0 ? `<strong>Pembulatan:</strong> ${inv.fakturPajak.pembulatan >= 0 ? '+' : ''}${fmtNum(inv.fakturPajak.pembulatan)}` : ''}</div>` : '';
+  const refPO = inv.poCustomer ? `<div style="font-size:9px">No. PO Customer: ${inv.poCustomer}</div>` : '';
+  return `
+    <div class="invoice-paper-page">
+      <div style="display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px">
+        <div><div style="font-weight:bold;font-size:14px">PT PKP</div><div style="font-size:9px">Jl. Contoh No. 123, Jakarta</div><div style="font-size:9px">NPWP: 01.234.567.8-901.000</div></div>
+        <div style="text-align:right"><div class="header-title">INVOICE</div><div style="font-size:10px">No: ${inv.no}</div><div style="font-size:10px">Tanggal: ${inv.tanggal}</div></div>
+      </div>
+      <div style="margin-bottom:8px;display:flex;justify-content:space-between">
+        <div><div style="font-size:9px;color:#666">Kepada:</div><div style="font-weight:bold">${inv.customerNama}</div><div style="font-size:9px">${cust.alamat || '-'}</div><div style="font-size:9px">NPWP/KTP: ${cust.npwp || '-'}</div>${refPO}</div>
+        <div style="text-align:right;font-size:9px"><div>Customer Non-PKP</div></div>
+      </div>
+      <table class="line-item" style="margin-bottom:8px"><thead><tr><th style="width:8%;text-align:center">No</th><th>Deskripsi</th><th style="width:12%;text-align:right">Qty</th><th style="width:20%;text-align:right">Harga</th><th style="width:22%;text-align:right">Jumlah</th></tr></thead><tbody>${rows}</tbody></table>
+      <table style="margin-bottom:8px"><tr><td style="text-align:right;padding:2px 6px;font-weight:bold">TOTAL</td><td style="text-align:right;padding:2px 6px;font-weight:bold;border-top:1px solid #000;width:35%">${fmt(inv.penjualan)}</td></tr></table>
+      <div style="font-size:9px;margin-bottom:12px;font-style:italic">Terbilang: <strong>${terbilang(inv.penjualan)}</strong></div>
+      ${fpRow}
+      <div style="font-size:9px;margin-bottom:12px"><strong>Pembayaran:</strong> Cash / Transfer<br><strong>Bank:</strong> Bank Contoh - A/C 1234567890</div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;margin-top:24px">
+        <div style="text-align:center"><div>Penerima,</div><div style="height:40px"></div><div style="border-top:1px solid #000;padding-top:2px">(________________)</div></div>
+        <div style="text-align:center"><div>Hormat Kami,</div><div style="height:40px"></div><div style="border-top:1px solid #000;padding-top:2px">(________________)</div></div>
+      </div>
+      <div style="text-align:center;font-size:8px;color:#666;margin-top:14px;border-top:1px dotted #999;padding-top:4px">Dicetak dari ERP PT PKP — ${new Date().toLocaleString('id-ID')}</div>
+    </div>
+  `;
+}
+function printSelectedInvoices() {
+  if (selectedInvoices.size === 0) return alert('Pilih minimal 1 invoice');
+  currentPrintBatch = Array.from(selectedInvoices);
+  showPrintPreviewBatch(currentPrintBatch);
+}
+function printInvoice(invNo) { currentPrintBatch = [invNo]; showPrintPreviewBatch([invNo]); }
+function downloadSelectedInvoicesPDF() {
+  if (selectedInvoices.size === 0) return alert('Pilih minimal 1 invoice');
+  generatePDFBatch(Array.from(selectedInvoices));
+}
+function downloadInvoicePDF(invNo) { generatePDFBatch([invNo]); }
+function downloadCurrentBatchPDF() {
+  if (currentPrintBatch.length === 0) return;
+  generatePDFBatch(currentPrintBatch);
+}
+function showPrintPreviewBatch(invNos) {
+  if (!invNos || invNos.length === 0) return;
+  document.getElementById('printCounter').textContent = `Menampilkan ${invNos.length} invoice`;
+  document.getElementById('printTotalCount').textContent = invNos.length;
+  const allHtml = invNos.map((invNo, idx) => {
+    const html = generateInvoiceHTML(invNo);
+    if (!html) return '';
+    const pageBreak = idx < invNos.length - 1 ? '<div style="page-break-after: always; height: 0;"></div>' : '';
+    return html + pageBreak;
+  }).join('');
+  document.getElementById('invoicePrintArea').innerHTML = allHtml;
+  document.getElementById('modalInvoicePrint').classList.add('active');
+}
+function printCurrentBatch() { if (currentPrintBatch.length > 0) window.print(); }
+async function generatePDFBatch(invNos) {
+  if (!invNos || invNos.length === 0) return alert('Tidak ada invoice');
+  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') return alert('Library PDF belum ter-load.');
+  const { jsPDF } = window.jspdf;
+  const toast = document.createElement('div');
+  toast.className = 'toast-box';
+  toast.innerHTML = `<div class="spinner"></div><span>Generating PDF...</span>`;
+  document.body.appendChild(toast);
+  const stage = document.getElementById('pdfRenderStage');
+  stage.innerHTML = '';
+  try {
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+    for (let i = 0; i < invNos.length; i++) {
+      toast.querySelector('span').textContent = `Generating (${i+1}/${invNos.length})...`;
+      const pageWrap = document.createElement('div');
+      pageWrap.style.cssText = 'width:148mm;min-height:210mm;padding:10mm;background:white;color:#000;font-size:11px;box-sizing:border-box;font-family:Segoe UI,Tahoma,sans-serif';
+      pageWrap.innerHTML = generateInvoiceHTML(invNos[i]);
+      const inner = pageWrap.querySelector('.invoice-paper-page');
+      if (inner) { inner.style.width = '100%'; inner.style.minHeight = 'auto'; inner.style.padding = '0'; }
+      stage.appendChild(pageWrap);
+      await new Promise(r => setTimeout(r, 80));
+      const canvas = await html2canvas(pageWrap, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgHeight = (canvas.height * 148) / canvas.width;
+      if (i > 0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, 0, 148, Math.min(imgHeight, 210));
+      stage.removeChild(pageWrap);
+    }
+    const filename = invNos.length === 1 ? `invoice-${invNos[0]}.pdf` : `invoice-batch-${invNos.length}-${today()}.pdf`;
+    pdf.save(filename);
+    stage.innerHTML = '';
+    document.body.removeChild(toast);
+    const success = document.createElement('div');
+    success.className = 'toast-box';
+    success.style.background = '#16a34a';
+    success.innerHTML = `<span>✅ PDF: ${filename}</span>`;
+    document.body.appendChild(success);
+    setTimeout(() => { if (document.body.contains(success)) document.body.removeChild(success); }, 3000);
+  } catch (err) {
+    console.error('PDF Error:', err);
+    if (document.body.contains(toast)) document.body.removeChild(toast);
+    stage.innerHTML = '';
+    alert('Gagal generate PDF: ' + err.message);
+  }
+}
+
+/* =========================================================
+   JURNAL
+   ========================================================= */
+function openModalJurnalKoreksi() {
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  document.getElementById('jkTanggal').value = today();
+  document.getElementById('jkKet').value = '';
+  document.getElementById('jkLines').innerHTML = '';
+  addJKLine(); addJKLine();
+  document.getElementById('modalJurnalKoreksi').classList.add('active');
+}
+function addJKLine() {
+  const tbody = document.getElementById('jkLines');
+  const tr = document.createElement('tr');
+  tr.className = 'line-row border-b';
+  tr.innerHTML = `
+    <td class="p-1"><select class="border rounded p-1 w-full text-xs akun-select" onchange="calcJK()"><option value="">-- Pilih --</option>${DB.coa.map(c => `<option value="${c.kode}">${c.kode} - ${c.nama}</option>`).join('')}</select></td>
+    <td class="p-1"><input type="number" class="border rounded p-1 w-full text-xs text-right debit" oninput="calcJK()" placeholder="0"></td>
+    <td class="p-1"><input type="number" class="border rounded p-1 w-full text-xs text-right kredit" oninput="calcJK()" placeholder="0"></td>
+    <td class="p-1 text-center"><button onclick="this.closest('tr').remove(); calcJK()" class="text-red-500 text-xs">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+  calcJK();
+}
+function calcJK() {
+  let tD = 0, tK = 0;
+  document.querySelectorAll('#jkLines tr').forEach(tr => {
+    tD += parseFloat(tr.querySelector('.debit')?.value) || 0;
+    tK += parseFloat(tr.querySelector('.kredit')?.value) || 0;
+  });
+  document.getElementById('jkTotalDebit').textContent = fmt(tD);
+  document.getElementById('jkTotalKredit').textContent = fmt(tK);
+  const diff = Math.abs(tD - tK);
+  const el = document.getElementById('jkBalance');
+  if (tD === 0 && tK === 0) el.textContent = '';
+  else if (diff < 0.5 && tD > 0) el.innerHTML = '<span class="text-green-600 font-semibold">✓ Balance</span>';
+  else el.innerHTML = `<span class="text-red-600 font-semibold">⚠ Tidak Balance: ${fmt(diff)}</span>`;
+  return { tD, tK, balanced: diff < 0.5 && tD > 0 };
+}
+function saveJurnalKoreksi() {
+  if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  const tgl = document.getElementById('jkTanggal').value || today();
+  const ket = document.getElementById('jkKet').value.trim();
+  if (!ket) return alert('Keterangan wajib');
+  const lines = [];
+  document.querySelectorAll('#jkLines tr').forEach(tr => {
+    const akunKode = tr.querySelector('.akun-select').value;
+    const debit = parseFloat(tr.querySelector('.debit').value) || 0;
+    const kredit = parseFloat(tr.querySelector('.kredit').value) || 0;
+    if ((debit > 0 || kredit > 0) && akunKode) {
+      const akun = DB.coa.find(c => c.kode === akunKode);
+      lines.push({ akun: akunKode, nama: akun.nama, debit, kredit });
+    }
+  });
+  const check = calcJK();
+  if (!check.balanced) return alert('Tidak balance');
+  if (lines.length < 2) return alert('Minimal 2 baris');
+  postJurnal(tgl, `[Koreksi] ${ket}`, lines);
+  logAudit('JURNAL KOREKSI', ket, '-', lines.map(l => `${l.akun}${l.debit > 0 ? ' Dr '+fmt(l.debit) : ' Cr '+fmt(l.kredit)}`).join(', '));
+  closeModal('modalJurnalKoreksi');
+  renderAll();
+  alert('✅ Jurnal koreksi berhasil disimpan');
+}
+function postJurnal(tgl, ket, lines) {
+  DB.counter.jurnal++;
+  const no = 'JV' + String(DB.counter.jurnal).padStart(5,'0');
+  lines.forEach(l => {
+    DB.jurnal.push({ no, tanggal: tgl, keterangan: ket, akun: l.akun, akunNama: l.nama, debit: l.debit, kredit: l.kredit });
+    DB.saldo[l.akun] = (DB.saldo[l.akun] || 0) + (l.debit - l.kredit);
+  });
+}
+
+/* =========================================================
+   CLOSING
+   ========================================================= */
+function doClosing() {
+  if (DB.isClosed) return alert('Periode sudah ditutup');
+  const d = getLabaRugiData();
+  if (Math.abs(d.penjualan) < 0.5 && Math.abs(d.hpp) < 0.5 && Math.abs(d.beban) < 0.5) return alert('Tidak ada transaksi');
+  const tglClosing = today();
+  const jurnalLines = [];
+  DB.coa.filter(c => c.tipe === 'Pendapatan' || c.tipe === 'Pendapatan Lain').forEach(c => {
+    const saldo = DB.saldo[c.kode] || 0;
+    if (Math.abs(saldo) < 0.5) return;
+    if (saldo < 0) jurnalLines.push({ akun: c.kode, nama: c.nama, debit: -saldo, kredit: 0 });
+    else jurnalLines.push({ akun: c.kode, nama: c.nama, debit: 0, kredit: saldo });
+  });
+  DB.coa.filter(c => c.tipe === 'HPP' || c.tipe === 'Beban Operasional' || c.tipe === 'Beban Lain').forEach(c => {
+    const saldo = DB.saldo[c.kode] || 0;
+    if (Math.abs(saldo) < 0.5) return;
+    if (saldo > 0) jurnalLines.push({ akun: c.kode, nama: c.nama, debit: 0, kredit: saldo });
+    else jurnalLines.push({ akun: c.kode, nama: c.nama, debit: -saldo, kredit: 0 });
+  });
+  let tD = jurnalLines.reduce((s, l) => s + l.debit, 0);
+  let tK = jurnalLines.reduce((s, l) => s + l.kredit, 0);
+  const selisih = tD - tK;
+  if (selisih > 0) jurnalLines.push({ akun: '303', nama: 'Laba Ditahan', debit: selisih, kredit: 0 });
+  else if (selisih < 0) jurnalLines.push({ akun: '303', nama: 'Laba Ditahan', debit: 0, kredit: -selisih });
+  if (jurnalLines.length > 0) postJurnal(tglClosing, `Tutup Buku ${periodLabel(DB.currentPeriod)}`, jurnalLines);
+  DB.closedPeriods.push({ periode: DB.currentPeriod, tglClosing, penjualan: d.penjualan, hpp: d.hpp, beban: d.beban, labaBersih: d.labaBersih, status: 'CLOSED' });
+  logAudit('TUTUP BUKU', `Periode ${periodLabel(DB.currentPeriod)}`, 'OPEN', `CLOSED, Laba: ${fmt(d.labaBersih)}`);
+  document.getElementById('lrPeriode').innerHTML = '';
+  DB.isClosed = true;
+  renderAll();
+  document.getElementById('closingResult').innerHTML = `<div class="bg-green-50 border-l-4 border-green-500 p-3 text-sm">✓ Tutup buku ${periodLabel(DB.currentPeriod)} berhasil. Laba: <strong>${fmt(d.labaBersih)}</strong></div>`;
+}
+function doUnlock() {
+  if (!DB.isClosed) return alert('Periode masih terbuka');
+  const alasan = document.getElementById('unlockAlasan').value.trim();
+  const password = document.getElementById('unlockPassword').value;
+  const konfirm = document.getElementById('unlockKonfirm').checked;
+  if (!alasan) return alert('Alasan wajib');
+  if (password !== 'admin123') return alert('Password salah');
+  if (!konfirm) return alert('Centang konfirmasi');
+  const idx = DB.closedPeriods.findIndex(p => p.periode === DB.currentPeriod);
+  if (idx === -1) return alert('Snapshot tidak ditemukan');
+  const closingKet = `Tutup Buku ${periodLabel(DB.currentPeriod)}`;
+  const closingJurnal = DB.jurnal.filter(j => j.keterangan === closingKet);
+  if (closingJurnal.length > 0) {
+    DB.counter.jurnal++;
+    const revNo = 'JV' + String(DB.counter.jurnal).padStart(5,'0');
+    closingJurnal.forEach(j => {
+      DB.jurnal.push({ no: revNo, tanggal: today(), keterangan: `[REVERSE] ${closingKet}`, akun: j.akun, akunNama: j.akunNama, debit: j.kredit, kredit: j.debit });
+      DB.saldo[j.akun] = (DB.saldo[j.akun] || 0) + (j.kredit - j.debit);
+    });
+  }
+  DB.closedPeriods[idx].status = 'REOPENED';
+  logAudit('UNLOCK', `Periode ${periodLabel(DB.currentPeriod)}`, 'CLOSED', `OPEN, Alasan: ${alasan}`);
+  document.getElementById('unlockAlasan').value = '';
+  document.getElementById('unlockPassword').value = '';
+  document.getElementById('unlockKonfirm').checked = false;
+  closeModal('modalUnlock');
+  DB.isClosed = false;
+  document.getElementById('lrPeriode').innerHTML = '';
+  renderAll();
+  document.getElementById('closingResult').innerHTML = `<div class="bg-orange-50 border-l-4 border-orange-500 p-3 text-sm">🔓 Periode berhasil dibuka. Alasan: <em>${alasan}</em></div>`;
+}
+
+/* =========================================================
+   PERIOD DROPDOWN HELPERS
+   ========================================================= */
+function fillPeriodDropdowns() {
+  const periods = listAvailablePeriods();
+  const curMonth = currentMonth();
+  ['jurnalPeriode','bbPeriode','tbPeriode','neracaPeriode','akPeriode'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const prevVal = sel.value;
+    sel.innerHTML = periods.map(p => `<option value="${p}" ${p === curMonth ? 'selected' : ''}>${periodLabel(p)}</option>`).join('');
+    if (prevVal && periods.includes(prevVal)) sel.value = prevVal;
+  });
+  // Dropdown akun untuk buku besar
+  const bbAkun = document.getElementById('bbAkun');
+  if (bbAkun) {
+    const prev = bbAkun.value;
+    bbAkun.innerHTML = '<option value="">-- Semua Akun --</option>' + DB.coa.map(c => `<option value="${c.kode}">${c.kode} - ${c.nama}</option>`).join('');
+    if (prev) bbAkun.value = prev;
+  }
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function renderAll() {
+  fillPeriodDropdowns();
+  renderPeriodBadge(); renderDashboard();
+  renderCustomer(); renderSupplier(); renderProduk(); renderCOA();
+  renderSO(); renderInvoice();
+  renderBeban(); renderAset();
+  renderJurnal(); renderBukuBesar(); renderTrial();
+  renderLabaRugi(); renderNeraca(); renderArusKas();
+  renderClosing(); renderClosedPeriods(); renderAuditLog(); applyClosedLock();
+}
+function renderPeriodBadge() {
+  document.getElementById('periodBadge').textContent = 'Periode: ' + periodLabel(DB.currentPeriod) + (DB.isClosed ? ' 🔒' : '');
+}
+function applyClosedLock() {
+  document.querySelectorAll('.btn-add').forEach(b => {
+    if (DB.isClosed) { b.classList.add('disabled-overlay'); b.title = 'Periode ditutup'; }
+    else { b.classList.remove('disabled-overlay'); b.title = ''; }
+  });
+}
+function renderDashboard() {
+  const totalPenjualan = DB.invoice.reduce((s,i) => s + i.penjualan, 0);
+  const totalPembelian = DB.invoice.reduce((s,i) => s + i.hpp, 0);
+  const laba = totalPenjualan - totalPembelian;
+  document.getElementById('kpiPenjualan').textContent = fmt(totalPenjualan);
+  document.getElementById('kpiPembelian').textContent = fmt(totalPembelian);
+  document.getElementById('kpiLaba').textContent = fmt(laba);
+  document.getElementById('kpiKas').textContent = fmt(DB.saldo['101'] || 0);
+  try {
+    const ctxT = document.getElementById('chartTren');
+    if (window._chartTrenInstance) { try { window._chartTrenInstance.destroy(); } catch(e){} }
+    window._chartTrenInstance = new Chart(ctxT, {
+      type: 'bar',
+      data: {
+        labels: ['Minggu 1','Minggu 2','Minggu 3','Minggu 4'],
+        datasets: [
+          { label: 'Penjualan', data: [totalPenjualan*0.2, totalPenjualan*0.3, totalPenjualan*0.2, totalPenjualan*0.3], backgroundColor: '#3b82f6' },
+          { label: 'Pembelian', data: [totalPembelian*0.3, totalPembelian*0.2, totalPembelian*0.3, totalPembelian*0.2], backgroundColor: '#f97316' },
+        ]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+  } catch(e) {}
+  try {
+    const ctxP = document.getElementById('chartProduk');
+    if (window._chartProdukInstance) { try { window._chartProdukInstance.destroy(); } catch(e){} }
+    const qtyPerProduk = {};
+    DB.invoice.forEach(inv => { inv.items.forEach(i => { qtyPerProduk[i.produkNama] = (qtyPerProduk[i.produkNama] || 0) + i.qty; }); });
+    const labels = Object.keys(qtyPerProduk);
+    window._chartProdukInstance = new Chart(ctxP, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Qty Terjual', data: labels.map(l => qtyPerProduk[l]), backgroundColor: '#3b82f6' }] },
+      options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } } }
+    });
+  } catch(e) {}
+  const all = DB.invoice.slice(-10).reverse();
+  document.getElementById('tblTransaksi').innerHTML = all.map(i => `
+    <tr class="border-b"><td class="p-2">${i.tanggal}</td><td class="p-2 font-mono text-xs">${i.no}</td><td class="p-2">${i.customerNama}</td><td class="p-2 text-xs">${i.supplierNama}</td><td class="p-2 text-right">${fmt(i.penjualan)}</td><td class="p-2 text-right">${fmt(i.hpp)}</td></tr>
+  `).join('') || '<tr><td colspan="6" class="text-center p-4 text-slate-400">Belum ada transaksi</td></tr>';
+}
+function renderCustomer() {
+  document.querySelector('#tblCustomer tbody').innerHTML = DB.customers.map(c => `<tr class="border-b"><td class="p-2 font-mono text-xs">${c.kode}</td><td class="p-2 font-semibold">${c.nama}</td><td class="p-2 text-xs">${c.alamat || '-'}</td><td class="p-2 text-xs">${c.npwp}</td><td class="p-2"><span class="badge bg-slate-100 text-slate-600">${c.status}</span></td></tr>`).join('') || '<tr><td colspan="5" class="text-center p-4 text-slate-400">Belum ada data</td></tr>';
+}
+function renderSupplier() {
+  document.querySelector('#tblSupplier tbody').innerHTML = DB.suppliers.map(s => `<tr class="border-b"><td class="p-2 font-mono text-xs">${s.kode}</td><td class="p-2 font-semibold">${s.nama}</td><td class="p-2 text-xs">${s.alamat || '-'}</td><td class="p-2 text-xs">${s.npwp}</td><td class="p-2"><span class="badge bg-green-100 text-green-700">${s.status}</span></td></tr>`).join('') || '<tr><td colspan="5" class="text-center p-4 text-slate-400">Belum ada data</td></tr>';
+}
+function renderProduk() {
+  const rekap = {};
+  DB.products.forEach(p => rekap[p.kode] = { ...p, totalQty: 0, totalNilai: 0 });
+  DB.invoice.forEach(inv => { inv.items.forEach(i => { if (rekap[i.produkKode]) { rekap[i.produkKode].totalQty += i.qty; rekap[i.produkKode].totalNilai += i.subtotalJual; } }); });
+  document.querySelector('#tblProduk tbody').innerHTML = DB.products.map(p => {
+    const r = rekap[p.kode];
+    return `<tr class="border-b"><td class="p-2 font-mono text-xs">${p.kode}</td><td class="p-2">${p.nama}</td><td class="p-2 text-xs">${p.satuan}</td><td class="p-2 text-right">${fmtNum(r.totalQty)}</td><td class="p-2 text-right">${fmt(r.totalNilai)}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" class="text-center p-4 text-slate-400">Belum ada data</td></tr>';
+}
+function renderCOA() {
+  document.querySelector('#tblCOA tbody').innerHTML = DB.coa.map(c => `<tr class="border-b"><td class="p-2 font-mono text-xs">${c.kode}</td><td class="p-2">${c.nama}</td><td class="p-2 text-xs">${c.tipe}</td><td class="p-2">${c.normal === 'D' ? 'Debit' : 'Kredit'}</td></tr>`).join('');
+}
+function renderSO() {
+  document.querySelector('#tblSO tbody').innerHTML = DB.so.map(s => `
+    <tr class="border-b">
+      <td class="p-2 font-mono text-xs">${s.no}${s.poCustomer ? `<div class="text-xs text-blue-600 mt-0.5">Ref: ${s.poCustomer}</div>` : ''}</td>
+      <td class="p-2">${s.tanggal}</td>
+      <td class="p-2">${s.customerNama}</td>
+      <td class="p-2">${s.supplierNama}</td>
+      <td class="p-2 text-right">${s.totalItem}</td>
+      <td class="p-2 text-right font-semibold">${fmt(s.totalJual)}</td>
+      <td class="p-2"><span class="badge ${s.status === 'OPEN' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}">${s.status}</span></td>
+      <td class="p-2 text-center">
+        <div class="flex gap-1 justify-center flex-wrap">
+          ${s.status === 'OPEN' ? `
+            <button onclick="buatInvoice('${s.no}')" class="icon-btn bg-green-600 text-white">💵 Invoice</button>
+            <button onclick="openEditSO('${s.no}')" class="icon-btn bg-blue-600 text-white">✏ Edit</button>
+            <button onclick="deleteSO('${s.no}')" class="icon-btn bg-red-600 text-white">🗑 Hapus</button>
+          ` : `
+            <button onclick="showSODetail('${s.no}')" class="icon-btn bg-slate-200 text-slate-700">👁 Detail</button>
+            <span class="text-xs text-slate-400 px-2 py-1">✓ Invoiced</span>
+          `}
+        </div>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="8" class="text-center p-4 text-slate-400">Belum ada SO</td></tr>';
+}
+function showSODetail(no) {
+  const s = DB.so.find(x => x.no === no);
+  let msg = `${s.no}\n`;
+  if (s.poCustomer) msg += `Ref PO Customer: ${s.poCustomer}\n`;
+  msg += `Customer: ${s.customerNama}\nSupplier: ${s.supplierNama}\nTanggal: ${s.tanggal}\n\n`;
+  msg += s.items.map(i => `${i.produkNama} — ${i.qty} x Jual ${fmt(i.hargaJual)} | Beli ${fmt(i.hargaBeli)} = Laba ${fmt(i.laba)}`).join('\n');
+  msg += `\n\nTotal Jual: ${fmt(s.totalJual)}\nTotal Beli: ${fmt(s.totalBeli)}\nLaba: ${fmt(s.totalLaba)}`;
+  alert(msg);
+}
+function renderInvoice() {
+  document.querySelector('#tblInvoice tbody').innerHTML = DB.invoice.map(i => {
+    const fp = i.fakturPajak;
+    const fpCell = fp ? `<div class="text-xs"><div class="font-mono text-green-700">${fp.nomor}</div>${fp.pembulatan !== 0 ? `<div class="text-slate-500">Pembulatan: ${fp.pembulatan >= 0 ? '+' : ''}${fmtNum(fp.pembulatan)}</div>` : ''}</div>` : `<span class="badge bg-red-100 text-red-700">Belum ada</span>`;
+    const isChecked = selectedInvoices.has(i.no);
+    return `
+    <tr class="border-b ${isChecked ? 'row-selected' : ''}" data-invno="${i.no}">
+      <td class="text-center p-2"><input type="checkbox" class="checkbox-inv chk-inv" data-invno="${i.no}" ${isChecked ? 'checked' : ''} onchange="toggleInvoiceSelection('${i.no}', this.checked)"></td>
+      <td class="p-2 font-mono text-xs">${i.no}</td>
+      <td class="p-2">${i.tanggal}</td>
+      <td class="p-2">${i.customerNama}</td>
+      <td class="p-2 text-right">${fmt(i.penjualan)}</td>
+      <td class="p-2 text-right">${fmt(i.hpp)}</td>
+      <td class="p-2 text-right font-semibold ${i.laba >= 0 ? 'text-green-600' : 'text-red-600'}">${fmt(i.laba)}</td>
+      <td class="p-2">${fpCell}</td>
+      <td class="p-2 text-center">
+        <div class="flex gap-1 justify-center flex-wrap">
+          <button onclick="printInvoice('${i.no}')" class="icon-btn bg-slate-600 text-white">👁 Preview</button>
+          <button onclick="downloadInvoicePDF('${i.no}')" class="icon-btn bg-red-600 text-white">📥 PDF</button>
+          <button onclick="openFakturModal('${i.no}')" class="icon-btn ${fp ? 'bg-yellow-500' : 'bg-blue-600'} text-white">🧾 ${fp ? 'Ubah' : 'Pasang'} FP</button>
+          <button onclick="deleteInvoice('${i.no}')" class="icon-btn bg-orange-600 text-white">🗑 Hapus</button>
+        </div>
+      </td>
+    </tr>
+  `;
+  }).join('') || '<tr><td colspan="10" class="text-center p-4 text-slate-400">Belum ada Invoice</td></tr>';
+  updateInvoiceSelectionUI();
+}
+function renderBeban() {
+  const bulanIni = currentMonth();
+  const bebanBulanIni = DB.beban.filter(b => b.tanggal.slice(0, 7) === bulanIni);
+  const total = bebanBulanIni.reduce((s, b) => s + b.jumlah, 0);
+  document.getElementById('bebanTotal').textContent = fmt(total);
+  document.getElementById('bebanCount').textContent = bebanBulanIni.length;
+  const perJenis = {};
+  bebanBulanIni.forEach(b => { perJenis[b.akunNama] = (perJenis[b.akunNama] || 0) + b.jumlah; });
+  const top = Object.keys(perJenis).sort((a,b) => perJenis[b] - perJenis[a])[0];
+  document.getElementById('bebanTop').textContent = top ? top : '-';
+  document.querySelector('#tblBeban tbody').innerHTML = DB.beban.slice().reverse().map(b => `
+    <tr class="border-b">
+      <td class="p-2">${b.tanggal}</td>
+      <td class="p-2"><span class="badge bg-blue-100 text-blue-700">${b.akunNama}</span></td>
+      <td class="p-2">${b.keterangan}</td>
+      <td class="p-2 text-right font-semibold">${fmt(b.jumlah)}</td>
+      <td class="p-2 text-center">
+        <div class="flex gap-1 justify-center">
+          <button onclick="openModalBeban('${b.no}')" class="icon-btn bg-blue-600 text-white">✏ Edit</button>
+          <button onclick="deleteBeban('${b.no}')" class="icon-btn bg-red-600 text-white">🗑 Hapus</button>
+        </div>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="text-center p-4 text-slate-400">Belum ada beban</td></tr>';
+}
+function renderAset() {
+  let totalPerolehan = 0, totalAkum = 0, totalNilaiBuku = 0;
+  const bulanIni = currentMonth();
+  let penyusutanBulanIni = 0;
+  DB.aset.forEach(a => {
+    totalPerolehan += a.harga;
+    totalAkum += a.totalPenyusutan;
+    totalNilaiBuku += (a.harga - a.totalPenyusutan);
+    if (a.lastPenyusutan === bulanIni) penyusutanBulanIni += a.penyusutanBulanan;
+  });
+  document.getElementById('asetTotalPerolehan').textContent = fmt(totalPerolehan);
+  document.getElementById('asetTotalAkum').textContent = fmt(totalAkum);
+  document.getElementById('asetNilaiBuku').textContent = fmt(totalNilaiBuku);
+  document.getElementById('asetPenyusutanBulanIni').textContent = fmt(penyusutanBulanIni);
+  document.querySelector('#tblAset tbody').innerHTML = DB.aset.map(a => {
+    const nilaiBuku = a.harga - a.totalPenyusutan;
+    const sudahLunas = a.totalPenyusutan >= a.harga - 1;
+    const sudahDisusutkan = a.totalPenyusutan > 0;
+    return `
+      <tr class="border-b">
+        <td class="p-2 text-xs">${a.tanggal}</td>
+        <td class="p-2 font-semibold">${a.nama}<div class="text-xs text-slate-500">${a.no}</div></td>
+        <td class="p-2 text-xs"><span class="badge bg-slate-100 text-slate-700">${a.akunAsetNama}</span></td>
+        <td class="p-2 text-right">${fmt(a.harga)}</td>
+        <td class="p-2 text-center text-xs">${a.umur} th</td>
+        <td class="p-2 text-right">${fmt(a.penyusutanBulanan)}</td>
+        <td class="p-2 text-right text-red-600">${fmt(a.totalPenyusutan)}</td>
+        <td class="p-2 text-right font-semibold ${sudahLunas ? 'text-slate-400' : 'text-green-700'}">${fmt(nilaiBuku)}${sudahLunas ? ' ✓' : ''}</td>
+        <td class="p-2 text-center">
+          <div class="flex gap-1 justify-center">
+            ${!sudahDisusutkan ? `<button onclick="openModalAset('${a.no}')" class="icon-btn bg-blue-600 text-white">✏ Edit</button>` : ''}
+            <button onclick="deleteAset('${a.no}')" class="icon-btn bg-red-600 text-white" ${sudahDisusutkan ? 'title="Sudah disusutkan, tidak bisa dihapus"' : ''}>🗑 Hapus</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="9" class="text-center p-4 text-slate-400">Belum ada aset</td></tr>';
+}
+
+/* JURNAL dengan filter periode */
+function renderJurnal() {
+  const periode = document.getElementById('jurnalPeriode')?.value || currentMonth();
+  const dari = document.getElementById('jurnalDari')?.value;
+  const sampai = document.getElementById('jurnalSampai')?.value;
+  let jurnalList;
+  let infoText;
+  if (dari && sampai) {
+    jurnalList = DB.jurnal.filter(j => j.tanggal >= dari && j.tanggal <= sampai);
+    infoText = `Custom: ${dari} s/d ${sampai}`;
+  } else {
+    const range = getPeriodRange(periode);
+    jurnalList = DB.jurnal.filter(j => j.tanggal >= range.dari && j.tanggal <= range.sampai);
+    infoText = `Periode: ${periodLabel(periode)} (${jurnalList.length} entri)`;
+  }
+  document.getElementById('jurnalInfo').textContent = infoText;
+  let tD = 0, tK = 0;
+  document.querySelector('#tblJurnal tbody').innerHTML = jurnalList.slice().reverse().map(j => {
+    tD += j.debit; tK += j.kredit;
+    return `<tr class="border-b text-xs"><td class="p-2">${j.tanggal}</td><td class="p-2 font-mono">${j.no}</td><td class="p-2">${j.keterangan}</td><td class="p-2">${j.akun} - ${j.akunNama}</td><td class="p-2 text-right">${j.debit ? fmt(j.debit) : '-'}</td><td class="p-2 text-right">${j.kredit ? fmt(j.kredit) : '-'}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="text-center p-4 text-slate-400">Tidak ada jurnal di periode ini</td></tr>';
+  document.getElementById('jurnalTotalD').textContent = fmt(tD);
+  document.getElementById('jurnalTotalK').textContent = fmt(tK);
+}
+function renderBukuBesar() {
+  const periode = document.getElementById('bbPeriode')?.value || currentMonth();
+  const akunFilter = document.getElementById('bbAkun')?.value || '';
+  const range = getPeriodRange(periode);
+  const jurnalList = DB.jurnal.filter(j => j.tanggal >= range.dari && j.tanggal <= range.sampai);
+  document.getElementById('bbInfo').textContent = `Periode: ${periodLabel(periode)} (${jurnalList.length} entri)`;
+  const grouped = {};
+  jurnalList.forEach(j => {
+    if (akunFilter && j.akun !== akunFilter) return;
+    if (!grouped[j.akun]) grouped[j.akun] = { nama: j.akunNama, items: [] };
+    grouped[j.akun].items.push(j);
+  });
+  document.getElementById('bukuBesarContainer').innerHTML = Object.keys(grouped).sort().map(kode => {
+    const g = grouped[kode];
+    let saldo = 0;
+    const rows = g.items.map(i => {
+      saldo += i.debit - i.kredit;
+      return `<tr class="border-b text-xs"><td class="p-1">${i.tanggal}</td><td class="p-1">${i.keterangan}</td><td class="p-1 text-right">${i.debit ? fmt(i.debit) : '-'}</td><td class="p-1 text-right">${i.kredit ? fmt(i.kredit) : '-'}</td><td class="p-1 text-right font-semibold">${fmt(saldo)}</td></tr>`;
+    }).join('');
+    const totalD = g.items.reduce((s, i) => s + i.debit, 0);
+    const totalK = g.items.reduce((s, i) => s + i.kredit, 0);
+    return `<div class="mb-4 border rounded overflow-hidden">
+      <div class="bg-slate-100 p-2 font-semibold text-sm">${kode} - ${g.nama}</div>
+      <table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs"><tr><th class="text-left p-1">Tgl</th><th class="text-left p-1">Ket</th><th class="text-right p-1">Debit</th><th class="text-right p-1">Kredit</th><th class="text-right p-1">Saldo</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot class="bg-slate-50 text-xs font-semibold"><tr><td colspan="2" class="text-right p-1">TOTAL</td><td class="text-right p-1">${fmt(totalD)}</td><td class="text-right p-1">${fmt(totalK)}</td><td class="text-right p-1">${fmt(totalD - totalK)}</td></tr></tfoot></table></div>`;
+  }).join('') || '<p class="text-center text-slate-400 py-4">Tidak ada jurnal di periode ini</p>';
+}
+function renderTrial() {
+  const periode = document.getElementById('tbPeriode')?.value || currentMonth();
+  const range = getPeriodRange(periode);
+  // Saldo sampai akhir periode
+  const saldo = getSaldoPeriode(periode);
+  document.getElementById('tbInfo').textContent = `Saldo per akhir: ${periodLabel(periode)}`;
+  const rows = [];
+  let tD = 0, tK = 0;
+  DB.coa.forEach(c => {
+    const s = saldo[c.kode] || 0;
+    if (Math.abs(s) < 0.5) return;
+    const debit = s > 0 ? s : 0;
+    const kredit = s < 0 ? -s : 0;
+    tD += debit; tK += kredit;
+    rows.push(`<tr class="border-b"><td class="p-2 font-mono text-xs">${c.kode}</td><td class="p-2">${c.nama}</td><td class="p-2 text-right">${debit ? fmt(debit) : '-'}</td><td class="p-2 text-right">${kredit ? fmt(kredit) : '-'}</td></tr>`);
+  });
+  document.querySelector('#tblTrial tbody').innerHTML = rows.join('') || '<tr><td colspan="4" class="text-center p-4 text-slate-400">Tidak ada saldo di periode ini</td></tr>';
+  document.getElementById('totalDebit').textContent = fmt(tD);
+  document.getElementById('totalKredit').textContent = fmt(tK);
+}
+function getLabaRugiData(saldoOverride = null) {
+  const saldo = saldoOverride || DB.saldo;
+  const penjualan = -(saldo['401'] || 0);
+  const hpp = saldo['501'] || 0;
+  let beban = 0;
+  DB.coa.filter(c => c.tipe === 'Beban Operasional' || c.tipe === 'Beban Lain').forEach(c => { beban += (saldo[c.kode] || 0); });
+  return { penjualan, hpp, beban, labaKotor: penjualan - hpp, labaBersih: penjualan - hpp - beban };
+}
+function renderLabaRugi() {
+  const select = document.getElementById('lrPeriode');
+  if (select.options.length === 0) {
+    let html = `<option value="current">${periodLabel(DB.currentPeriod)} (Aktif)</option>`;
+    DB.closedPeriods.forEach((p, idx) => { html += `<option value="closed-${idx}">${periodLabel(p.periode)} (${p.status || 'Closed'})</option>`; });
+    select.innerHTML = html;
+  }
+  const val = select.value || 'current';
+  let d;
+  if (val === 'current') d = getLabaRugiData();
+  else {
+    const idx = parseInt(val.split('-')[1]);
+    const p = DB.closedPeriods[idx];
+    d = { penjualan: p.penjualan, hpp: p.hpp, beban: p.beban, labaKotor: p.penjualan - p.hpp, labaBersih: p.labaBersih };
+  }
+  document.querySelector('#tblLabaRugi tbody').innerHTML = `
+    <tr class="border-b"><td class="p-2 font-semibold">Pendapatan Penjualan</td><td class="p-2 text-right">${fmt(d.penjualan)}</td></tr>
+    <tr class="border-b"><td class="p-2 pl-6">Harga Pokok Penjualan (HPP)</td><td class="p-2 text-right text-red-600">(${fmt(d.hpp)})</td></tr>
+    <tr class="border-b bg-slate-50 font-semibold"><td class="p-2">Laba Kotor</td><td class="p-2 text-right">${fmt(d.labaKotor)}</td></tr>
+    <tr class="border-b"><td class="p-2 pl-6">Total Beban Operasional</td><td class="p-2 text-right text-red-600">(${fmt(d.beban)})</td></tr>
+    <tr class="bg-green-50 font-bold text-lg"><td class="p-2">LABA BERSIH</td><td class="p-2 text-right text-green-700">${fmt(d.labaBersih)}</td></tr>
+  `;
+}
+function getNeracaData(periode = null) {
+  const saldo = periode ? getSaldoPeriode(periode) : DB.saldo;
+  const kas = saldo['101'] || 0;
+  const piutang = saldo['102'] || 0;
+  const ppnMasukan = saldo['104'] || 0;
+  const asetList = [];
+  ['121','121A','121B','121C'].forEach(kode => {
+    const s = saldo[kode] || 0;
+    if (Math.abs(s) < 0.5) return;
+    const coa = DB.coa.find(c => c.kode === kode);
+    asetList.push({ nama: coa.nama, nilai: s });
+  });
+  const kontraList = [];
+  ['122','122A','122B','122C'].forEach(kode => {
+    const s = -(saldo[kode] || 0);
+    if (Math.abs(s) < 0.5) return;
+    const coa = DB.coa.find(c => c.kode === kode);
+    kontraList.push({ nama: coa.nama, nilai: -s });
+  });
+  const totalAsetLancar = kas + piutang + ppnMasukan;
+  const totalAsetTetap = asetList.reduce((s,a) => s + a.nilai, 0);
+  const totalKontraAset = kontraList.reduce((s,a) => s + a.nilai, 0);
+  const totalAset = totalAsetLancar + totalAsetTetap + totalKontraAset;
+  const hutang = -(saldo['201'] || 0);
+  const ppnKel = -(saldo['202'] || 0);
+  const modal = -(saldo['301'] || 0);
+  const labaDitahan = -(saldo['303'] || 0);
+  // Laba berjalan = pendapatan - hpp - beban dari saldo periode ini
+  const labaBerjalan = getLabaRugiData(saldo).labaBersih;
+  const totalKewajiban = hutang + ppnKel;
+  const totalEkuitas = modal + labaDitahan + labaBerjalan;
+  const totalPasiva = totalKewajiban + totalEkuitas;
+  return {
+    aset: [
+      { nama: 'Kas / Bank', nilai: kas },
+      { nama: 'Piutang Dagang', nilai: piutang },
+      { nama: 'PPN Masukan', nilai: ppnMasukan },
+      ...asetList,
+      ...kontraList,
+    ],
+    kewajiban: [
+      { nama: 'Hutang Dagang', nilai: hutang },
+      { nama: 'PPN Keluaran', nilai: ppnKel },
+    ],
+    ekuitas: [
+      { nama: 'Modal Disetor', nilai: modal },
+      { nama: 'Laba Ditahan', nilai: labaDitahan },
+      { nama: 'Laba Tahun Berjalan', nilai: labaBerjalan },
+    ],
+    totalAset, totalKewajiban, totalEkuitas, totalPasiva,
+  };
+}
+function renderNeraca() {
+  const periode = document.getElementById('neracaPeriode')?.value || currentMonth();
+  const range = getPeriodRange(periode);
+  document.getElementById('neracaInfo').textContent = `Posisi per akhir: ${periodLabel(periode)}`;
+  document.getElementById('neracaTgl').textContent = `Per: ${range.sampai}`;
+  const d = getNeracaData(periode);
+  document.querySelector('#tblAsetNeraca tbody').innerHTML =
+    d.aset.map(a => `<tr class="border-b"><td class="p-2">${a.nama}</td><td class="p-2 text-right">${fmt(a.nilai)}</td></tr>`).join('') +
+    `<tr class="bg-slate-50 font-bold"><td class="p-2">Total Aset</td><td class="p-2 text-right">${fmt(d.totalAset)}</td></tr>`;
+  document.querySelector('#tblKewajiban tbody').innerHTML =
+    d.kewajiban.map(k => `<tr class="border-b"><td class="p-2">${k.nama}</td><td class="p-2 text-right">${fmt(k.nilai)}</td></tr>`).join('') +
+    d.ekuitas.map(e => `<tr class="border-b"><td class="p-2">${e.nama}</td><td class="p-2 text-right">${fmt(e.nilai)}</td></tr>`).join('') +
+    `<tr class="bg-slate-50 font-bold"><td class="p-2">Total Kewajiban + Ekuitas</td><td class="p-2 text-right">${fmt(d.totalPasiva)}</td></tr>`;
+  document.getElementById('neracaTotalAset').textContent = fmt(d.totalAset);
+  document.getElementById('neracaTotalPasiva').textContent = fmt(d.totalPasiva);
+  const diff = Math.abs(d.totalAset - d.totalPasiva);
+  const status = document.getElementById('neracaStatus');
+  if (diff < 1) { status.textContent = '✓ Balance'; status.className = 'text-center mt-2 text-green-600 font-semibold'; }
+  else { status.textContent = `⚠ Selisih: ${fmt(diff)}`; status.className = 'text-center mt-2 text-yellow-600 font-semibold text-xs'; }
+}
+function renderArusKas() {
+  const periode = document.getElementById('akPeriode')?.value || currentMonth();
+  const range = getPeriodRange(periode);
+  document.getElementById('akInfo').textContent = `Periode: ${periodLabel(periode)}`;
+  document.getElementById('akPeriodeLabel').textContent = `Periode: ${periodLabel(periode)}`;
+  // Ambil jurnal dalam periode
+  const jurnalPeriode = DB.jurnal.filter(j => j.tanggal >= range.dari && j.tanggal <= range.sampai);
+  // Kas masuk: jurnal yang debit ke 101 (kas)
+  let kasMasukOperasi = 0;
+  let kasKeluarOperasi = 0;
+  let kasKeluarInvestasi = 0;
+  jurnalPeriode.forEach(j => {
+    if (j.akun === '101' && j.debit > 0) {
+      // Cari jurnal pasangan (dalam grup no yang sama)
+      const group = DB.jurnal.filter(x => x.no === j.no);
+      const adaPenjualan = group.some(x => x.akun === '401');
+      if (adaPenjualan) kasMasukOperasi += j.debit;
+    }
+    if (j.akun === '101' && j.kredit > 0) {
+      const group = DB.jurnal.filter(x => x.no === j.no);
+      const adaHPP = group.some(x => x.akun === '501');
+      const adaBeban = group.some(x => ['601','602','603','604','605','606','607','608','701'].includes(x.akun));
+      const adaAset = group.some(x => ['121','121A','121B','121C'].includes(x.akun));
+      const adaModal = group.some(x => x.akun === '301');
+      if (adaHPP) kasKeluarOperasi += j.kredit;
+      if (adaBeban) kasKeluarOperasi += j.kredit;
+      if (adaAset) kasKeluarInvestasi += j.kredit;
+      if (adaModal) { /* modal awal, bukan operasi */ }
+    }
+  });
+  const nettoOperasi = kasMasukOperasi - kasKeluarOperasi;
+  const nettoInvestasi = -kasKeluarInvestasi;
+  const netto = nettoOperasi + nettoInvestasi;
+  const saldoAkhir = DB.jurnal.filter(j => j.tanggal <= range.sampai && j.akun === '101').reduce((s, j) => s + j.debit - j.kredit, 0);
+  document.querySelector('#tblArusKas tbody').innerHTML = `
+    <tr class="bg-slate-100 font-semibold"><td class="p-2" colspan="2">AKTIVITAS OPERASI</td></tr>
+    <tr class="border-b"><td class="p-2 pl-6">Penerimaan dari Penjualan</td><td class="p-2 text-right">${fmt(kasMasukOperasi)}</td></tr>
+    <tr class="border-b"><td class="p-2 pl-6">Pembayaran Pembelian (HPP)</td><td class="p-2 text-right text-red-600">(${fmt(kasKeluarOperasi)})</td></tr>
+    <tr class="border-b bg-slate-50 font-semibold"><td class="p-2">Neto Operasi</td><td class="p-2 text-right">${fmt(nettoOperasi)}</td></tr>
+    <tr class="bg-slate-100 font-semibold"><td class="p-2" colspan="2">AKTIVITAS INVESTASI</td></tr>
+    <tr class="border-b"><td class="p-2 pl-6">Pembelian Aset Tetap</td><td class="p-2 text-right text-red-600">(${fmt(kasKeluarInvestasi)})</td></tr>
+    <tr class="border-b bg-slate-50 font-semibold"><td class="p-2">Neto Investasi</td><td class="p-2 text-right">${fmt(nettoInvestasi)}</td></tr>
+    <tr class="border-b bg-slate-100 font-bold"><td class="p-2">ARUS KAS NETO</td><td class="p-2 text-right">${fmt(netto)}</td></tr>
+    <tr class="bg-blue-50 font-bold"><td class="p-2">Saldo Kas Akhir</td><td class="p-2 text-right">${fmt(saldoAkhir)}</td></tr>
+  `;
+}
+function renderClosing() {
+  const d = getLabaRugiData();
+  document.getElementById('closingPeriode').textContent = periodLabel(DB.currentPeriod);
+  document.getElementById('closingStatus').innerHTML = DB.isClosed ? '<span class="text-red-600">🔒 CLOSED</span>' : '<span class="text-green-600">✓ OPEN</span>';
+  document.getElementById('closingPenjualan').textContent = fmt(d.penjualan);
+  document.getElementById('closingHPP').textContent = fmt(d.hpp);
+  document.getElementById('closingBeban').textContent = fmt(d.beban);
+  document.getElementById('closingLaba').textContent = fmt(d.labaBersih);
+  const btn = document.getElementById('btnClosing');
+  const btnUnlock = document.getElementById('btnUnlock');
+  if (DB.isClosed) {
+    btn.classList.add('opacity-50', 'cursor-not-allowed');
+    btn.textContent = '🔒 Periode Sudah Ditutup';
+    btnUnlock.classList.remove('hidden');
+  } else {
+    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    btn.textContent = '🔒 Proses Tutup Buku';
+    btnUnlock.classList.add('hidden');
+  }
+}
+function renderClosedPeriods() {
+  document.querySelector('#tblClosedPeriods tbody').innerHTML = DB.closedPeriods.map(p => `
+    <tr class="border-b">
+      <td class="p-2 font-semibold">${periodLabel(p.periode)}</td>
+      <td class="p-2 text-xs">${p.tglClosing}</td>
+      <td class="p-2 text-right">${fmt(p.penjualan)}</td>
+      <td class="p-2 text-right">${fmt(p.hpp)}</td>
+      <td class="p-2 text-right">${fmt(p.beban)}</td>
+      <td class="p-2 text-right font-semibold ${p.labaBersih >= 0 ? 'text-green-600' : 'text-red-600'}">${fmt(p.labaBersih)}</td>
+      <td class="p-2"><span class="badge ${p.status === 'REOPENED' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'}">${p.status || 'CLOSED'}</span></td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" class="text-center p-4 text-slate-400">Belum ada periode tertutup</td></tr>';
+}
+function renderAuditLog() {
+  const dari = document.getElementById('auditDari')?.value || '';
+  const sampai = document.getElementById('auditSampai')?.value || '';
+  const filterAksi = document.getElementById('auditFilterAksi')?.value || '';
+  let filtered = DB.auditLog.slice().reverse();
+  if (dari) filtered = filtered.filter(a => a.waktu.slice(0,10) >= dari);
+  if (sampai) filtered = filtered.filter(a => a.waktu.slice(0,10) <= sampai);
+  if (filterAksi) filtered = filtered.filter(a => a.aksi === filterAksi);
+  document.getElementById('auditTotal').textContent = DB.auditLog.length;
+  document.getElementById('auditClosing').textContent = DB.auditLog.filter(a => a.aksi === 'TUTUP BUKU').length;
+  document.getElementById('auditUnlock').textContent = DB.auditLog.filter(a => a.aksi === 'UNLOCK').length;
+  document.getElementById('auditKoreksi').textContent = DB.auditLog.filter(a => a.aksi === 'JURNAL KOREKSI').length;
+  document.querySelector('#tblAuditLog tbody').innerHTML = filtered.map(a => {
+    const colorMap = {
+      'TUTUP BUKU': 'bg-red-100 text-red-700', 'UNLOCK': 'bg-orange-100 text-orange-700',
+      'JURNAL KOREKSI': 'bg-blue-100 text-blue-700', 'FAKTUR PAJAK': 'bg-green-100 text-green-700',
+      'MASTER DATA': 'bg-slate-100 text-slate-700', 'SISTEM': 'bg-purple-100 text-purple-700',
+      'SO DIBUAT': 'bg-cyan-100 text-cyan-700', 'SO DIUBAH': 'bg-yellow-100 text-yellow-700', 'SO DIHAPUS': 'bg-red-100 text-red-700',
+      'INVOICE DIBUAT': 'bg-indigo-100 text-indigo-700', 'INVOICE DIHAPUS': 'bg-orange-100 text-orange-700',
+      'BEBAN DIBUAT': 'bg-pink-100 text-pink-700', 'BEBAN DIUBAH': 'bg-yellow-100 text-yellow-700', 'BEBAN DIHAPUS': 'bg-red-100 text-red-700',
+      'ASET DIBUAT': 'bg-teal-100 text-teal-700', 'ASET DIUBAH': 'bg-yellow-100 text-yellow-700', 'ASET DIHAPUS': 'bg-red-100 text-red-700',
+      'PENYUSUTAN': 'bg-purple-100 text-purple-700',
+    };
+    return `<tr class="border-b text-xs"><td class="p-2 font-mono whitespace-nowrap">${a.waktu}</td><td class="p-2"><span class="badge ${colorMap[a.aksi] || 'bg-slate-100'}">${a.aksi}</span></td><td class="p-2">${a.user}</td><td class="p-2">${a.detail}</td><td class="p-2 text-xs text-slate-500">${a.sebelum}</td><td class="p-2 text-xs text-slate-700">${a.sesudah}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="text-center p-4 text-slate-400">Belum ada aktivitas</td></tr>';
+}
+function getInvoiceLines(dari, sampai) {
+  const out = [];
+  DB.invoice.forEach(inv => {
+    if (inv.tanggal >= dari && inv.tanggal <= sampai) {
+      inv.items.forEach(i => {
+        out.push({ tgl: inv.tanggal, invNo: inv.no, customer: inv.customerNama, supplier: inv.supplierNama, produkKode: i.produkKode, produkNama: i.produkNama, qty: i.qty, hargaJual: i.hargaJual, hargaBeli: i.hargaBeli, subtotalJual: i.subtotalJual, subtotalBeli: i.subtotalBeli, laba: i.laba });
+      });
+    }
+  });
+  return out;
+}
+function renderLapPenjualan() {
+  const dari = document.getElementById('lapJualDari').value || '0000-01-01';
+  const sampai = document.getElementById('lapJualSampai').value || '9999-12-31';
+  const lines = getInvoiceLines(dari, sampai);
+  const total = lines.reduce((s,l) => s + l.subtotalJual, 0);
+  const totalHpp = lines.reduce((s,l) => s + l.subtotalBeli, 0);
+  document.getElementById('lapJualTotal').textContent = fmt(total);
+  document.getElementById('lapJualHPP').textContent = fmt(totalHpp);
+  document.getElementById('lapJualLaba').textContent = fmt(total - totalHpp);
+  const perCust = {};
+  lines.forEach(l => { perCust[l.customer] = (perCust[l.customer] || 0) + l.subtotalJual; });
+  document.querySelector('#tblLapJualCust tbody').innerHTML = Object.keys(perCust).map(k => `<tr class="border-b"><td class="p-2">${k}</td><td class="p-2 text-right">${fmt(perCust[k])}</td></tr>`).join('') || '<tr><td colspan="2" class="text-center p-3 text-slate-400">Tidak ada data</td></tr>';
+  const perProd = {};
+  lines.forEach(l => {
+    if (!perProd[l.produkNama]) perProd[l.produkNama] = { qty: 0, total: 0, hpp: 0 };
+    perProd[l.produkNama].qty += l.qty;
+    perProd[l.produkNama].total += l.subtotalJual;
+    perProd[l.produkNama].hpp += l.subtotalBeli;
+  });
+  document.querySelector('#tblLapJualProd tbody').innerHTML = Object.keys(perProd).map(k => {
+    const d = perProd[k];
+    return `<tr class="border-b"><td class="p-2">${k}</td><td class="p-2 text-right">${fmtNum(d.qty)}</td><td class="p-2 text-right">${fmt(d.total)}</td><td class="p-2 text-right">${fmt(d.hpp)}</td><td class="p-2 text-right font-semibold text-green-600">${fmt(d.total - d.hpp)}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" class="text-center p-3 text-slate-400">Tidak ada data</td></tr>';
+  document.querySelector('#tblLapJualDetail tbody').innerHTML = lines.map(l => `<tr class="border-b text-xs"><td class="p-2">${l.tgl}</td><td class="p-2 font-mono">${l.invNo}</td><td class="p-2">${l.customer}</td><td class="p-2 text-xs">${l.supplier}</td><td class="p-2">${l.produkNama}</td><td class="p-2 text-right">${l.qty}</td><td class="p-2 text-right">${fmt(l.hargaJual)}</td><td class="p-2 text-right">${fmt(l.hargaBeli)}</td><td class="p-2 text-right font-semibold text-green-600">${fmt(l.laba)}</td></tr>`).join('') || '<tr><td colspan="9" class="text-center p-3 text-slate-400">Tidak ada data</td></tr>';
+}
+function resetData() { if (!confirm('Reset semua data demo?')) return; location.reload(); }
+
+/* =========================================================
+   SEED
+   ========================================================= */
+function seed() {
+  DB.suppliers = [
+    { kode: 'S001', nama: 'PT Sumber Makmur', alamat: 'Jl. Industri Raya No. 45, Jakarta Utara', npwp: '01.111.222.3-401.000', status: 'PKP' },
+    { kode: 'S002', nama: 'CV Aneka Supply', alamat: 'Jl. Pasar Baru No. 12, Bandung', npwp: '02.222.333.4-402.000', status: 'PKP' },
+    { kode: 'S003', nama: 'PT Grosir Utama', alamat: 'Jl. Raya Surabaya No. 88, Surabaya', npwp: '03.333.444.5-403.000', status: 'PKP' },
+  ];
+  DB.counter.sup = 3;
+  DB.customers = [
+    { kode: 'C001', nama: 'Toko Sinar Jaya', alamat: 'Jl. Merdeka No. 10, Jakarta Pusat', npwp: '3171012345670001', status: 'Non-PKP' },
+    { kode: 'C002', nama: 'CV Maju Terus', alamat: 'Jl. Sudirman No. 25, Bekasi', npwp: '3275012345670002', status: 'Non-PKP' },
+    { kode: 'C003', nama: 'UD Berkah Abadi', alamat: 'Jl. Ahmad Yani No. 5, Tangerang', npwp: '3671012345670003', status: 'Non-PKP' },
+    { kode: 'C004', nama: 'Toko Amanah', alamat: 'Jl. Diponegoro No. 77, Depok', npwp: '3276012345670004', status: 'Non-PKP' },
+    { kode: 'C005', nama: 'Koperasi Warga Sejahtera', alamat: 'Jl. Kartini No. 33, Bogor', npwp: '3201012345670005', status: 'Non-PKP' },
+  ];
+  DB.counter.cust = 5;
+  DB.products = [
+    { kode: 'P001', nama: 'Beras Premium 5kg', satuan: 'sak' },
+    { kode: 'P002', nama: 'Minyak Goreng 2L', satuan: 'karton' },
+    { kode: 'P003', nama: 'Gula Pasir 1kg', satuan: 'karton' },
+    { kode: 'P004', nama: 'Tepung Terigu 1kg', satuan: 'karton' },
+    { kode: 'P005', nama: 'Telur Ayam 1tray', satuan: 'tray' },
+    { kode: 'P006', nama: 'Sabun Cuci 800ml', satuan: 'karton' },
+  ];
+  DB.counter.prod = 6;
+
+  postJurnal('2026-10-01', 'Setoran Modal Awal', [
+    { akun: '101', nama: 'Kas / Bank', debit: 500000000, kredit: 0 },
+    { akun: '301', nama: 'Modal Disetor', debit: 0, kredit: 500000000 },
+  ]);
+
+  createSOSeed('C001', 'S001', '2026-10-04', 'PO-CUST/2026/001', [
+    { produkKode: 'P001', qty: 30, hargaBeli: 55000, hargaJual: 68000 },
+    { produkKode: 'P002', qty: 25, hargaBeli: 32000, hargaJual: 40000 },
+  ]);
+  createInvoiceFromSO(DB.so[0].no);
+  createSOSeed('C002', 'S002', '2026-10-07', 'PO-CUST/2026/002', [
+    { produkKode: 'P003', qty: 50, hargaBeli: 14000, hargaJual: 17500 },
+    { produkKode: 'P004', qty: 40, hargaBeli: 11000, hargaJual: 14000 },
+    { produkKode: 'P005', qty: 20, hargaBeli: 22000, hargaJual: 28000 },
+  ]);
+  createInvoiceFromSO(DB.so[1].no);
+  createSOSeed('C003', 'S003', '2026-10-12', null, [
+    { produkKode: 'P006', qty: 40, hargaBeli: 18000, hargaJual: 23000 },
+    { produkKode: 'P001', qty: 20, hargaBeli: 56000, hargaJual: 70000 },
+  ]);
+  createInvoiceFromSO(DB.so[2].no);
+  createSOSeed('C004', 'S001', '2026-10-15', 'PO-CUST/2026/003', [
+    { produkKode: 'P002', qty: 30, hargaBeli: 32000, hargaJual: 41000 },
+    { produkKode: 'P003', qty: 60, hargaBeli: 14000, hargaJual: 18000 },
+  ]);
+  createInvoiceFromSO(DB.so[3].no);
+  createSOSeed('C005', 'S002', '2026-10-18', 'PO-CUST/2026/004', [
+    { produkKode: 'P004', qty: 50, hargaBeli: 11000, hargaJual: 14500 },
+    { produkKode: 'P005', qty: 30, hargaBeli: 22000, hargaJual: 29000 },
+    { produkKode: 'P006', qty: 30, hargaBeli: 18000, hargaJual: 24000 },
+  ]);
+
+  DB.counter.beban++;
+  DB.beban.push({ no: 'BBN0001', tanggal: '2026-10-20', akunKode: '601', akunNama: 'Beban Gaji & Tunjangan', keterangan: 'Gaji 5 karyawan Oktober 2026', jumlah: 8500000 });
+  postJurnal('2026-10-20', `Beban Beban Gaji & Tunjangan - Gaji 5 karyawan Oktober 2026`, [
+    { akun: '601', nama: 'Beban Gaji & Tunjangan', debit: 8500000, kredit: 0 },
+    { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: 8500000 },
+  ]);
+  DB.counter.beban++;
+  DB.beban.push({ no: 'BBN0002', tanggal: '2026-10-22', akunKode: '603', akunNama: 'Beban Listrik, Air & Telepon', keterangan: 'Listrik & internet Oktober', jumlah: 1500000 });
+  postJurnal('2026-10-22', `Beban Beban Listrik, Air & Telepon - Listrik & internet Oktober`, [
+    { akun: '603', nama: 'Beban Listrik, Air & Telepon', debit: 1500000, kredit: 0 },
+    { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: 1500000 },
+  ]);
+  DB.counter.beban++;
+  DB.beban.push({ no: 'BBN0003', tanggal: '2026-10-25', akunKode: '604', akunNama: 'Beban Transportasi', keterangan: 'Bensin & tol', jumlah: 800000 });
+  postJurnal('2026-10-25', `Beban Beban Transportasi - Bensin & tol`, [
+    { akun: '604', nama: 'Beban Transportasi', debit: 800000, kredit: 0 },
+    { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: 800000 },
+  ]);
+
+  const aset1Harga = 15000000, aset1Umur = 4;
+  const aset1Penyusutan = aset1Harga / (aset1Umur * 12);
+  DB.counter.aset++;
+  DB.aset.push({ no: 'AST0001', tanggal: '2026-10-05', kategori: '121A', nama: 'Laptop Dell Latitude 15 inch', harga: aset1Harga, umur: aset1Umur, penyusutanBulanan: aset1Penyusutan, akumulasi: 0, keterangan: 'Untuk staf accounting', akunAset: '121A', akunAsetNama: 'Komputer & Laptop', akunAkum: '122A', akunAkumNama: 'Akum. Penyusutan Komputer & Laptop', lastPenyusutan: null, totalPenyusutan: 0 });
+  postJurnal('2026-10-05', `Perolehan Aset AST0001 - Laptop Dell Latitude 15 inch`, [
+    { akun: '121A', nama: 'Komputer & Laptop', debit: aset1Harga, kredit: 0 },
+    { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: aset1Harga },
+  ]);
+  const aset2Harga = 5000000, aset2Umur = 5;
+  const aset2Penyusutan = aset2Harga / (aset2Umur * 12);
+  DB.counter.aset++;
+  DB.aset.push({ no: 'AST0002', tanggal: '2026-10-08', kategori: '121C', nama: 'Meja & Kursi Kantor', harga: aset2Harga, umur: aset2Umur, penyusutanBulanan: aset2Penyusutan, akumulasi: 0, keterangan: 'Set meja 1 + kursi 2', akunAset: '121C', akunAsetNama: 'Furnitur', akunAkum: '122C', akunAkumNama: 'Akum. Penyusutan Furnitur', lastPenyusutan: null, totalPenyusutan: 0 });
+  postJurnal('2026-10-08', `Perolehan Aset AST0002 - Meja & Kursi Kantor`, [
+    { akun: '121C', nama: 'Furnitur', debit: aset2Harga, kredit: 0 },
+    { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: aset2Harga },
+  ]);
+
+  logAudit('SISTEM', 'Inisialisasi sistem', '-', `Customer: ${DB.customers.length}, Supplier: ${DB.suppliers.length}, Aset: ${DB.aset.length}`);
+  document.getElementById('lapJualDari').value = '2026-10-01';
+  document.getElementById('lapJualSampai').value = '2026-10-31';
+  document.getElementById('todayDate').textContent = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+function createSOSeed(custKode, supKode, tgl, poCustomer, itemsRaw) {
+  const cust = DB.customers.find(c => c.kode === custKode);
+  const sup = DB.suppliers.find(s => s.kode === supKode);
+  DB.counter.so++;
+  const soNo = 'SO' + String(DB.counter.so).padStart(4,'0');
+  const items = itemsRaw.map(i => {
+    const prod = DB.products.find(p => p.kode === i.produkKode);
+    return { produkKode: i.produkKode, produkNama: prod.nama, satuan: prod.satuan, qty: i.qty, hargaBeli: i.hargaBeli, hargaJual: i.hargaJual, subtotalBeli: i.qty * i.hargaBeli, subtotalJual: i.qty * i.hargaJual, laba: i.qty * (i.hargaJual - i.hargaBeli) };
+  });
+  const totalBeli = items.reduce((s,i) => s + i.subtotalBeli, 0);
+  const totalJual = items.reduce((s,i) => s + i.subtotalJual, 0);
+  DB.so.push({ no: soNo, poCustomer: poCustomer || null, tanggal: tgl, customerKode: custKode, customerNama: cust.nama, supplierKode: supKode, supplierNama: sup.nama, items, totalBeli, totalJual, totalLaba: totalJual - totalBeli, totalItem: items.length, status: 'OPEN' });
+  return DB.so[DB.so.length - 1];
+}
+
+try {
+  seed();
+  console.log('✅ Seed OK');
+  renderAll();
+  renderLapPenjualan();
+  console.log('✅ Render OK');
+} catch (e) {
+  console.error('❌ INIT ERROR:', e);
+  alert('Error: ' + e.message);
+}
+</script>
+
+</body>
+</html>
