@@ -50,6 +50,8 @@
   .icon-btn { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; transition: all 0.15s; display: inline-flex; align-items: center; gap: 3px; }
   .icon-btn:hover { transform: translateY(-1px); }
   .period-selector { background: white; border: 2px solid #3b82f6; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .badge-aktif { background: #d1fae5; color: #065f46; }
+  .badge-nonaktif { background: #fee2e2; color: #991b1b; }
 </style>
 </head>
 <body class="bg-gray-100">
@@ -70,6 +72,8 @@
       <a href="#" onclick="showPage('supplier', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>🏭</span> Supplier</a>
       <a href="#" onclick="showPage('produk', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>📦</span> Produk</a>
       <a href="#" onclick="showPage('coa', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>📋</span> Chart of Account</a>
+      <a href="#" onclick="showPage('jenis-beban', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>💸</span> Jenis Beban</a>
+      <a href="#" onclick="showPage('kategori-aset', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>🏢</span> Kategori Aset</a>
 
       <div class="text-slate-400 text-xs uppercase px-3 py-2 mt-2">Transaksi</div>
       <a href="#" onclick="showPage('so', this)" class="sidebar-item flex items-center gap-2 px-3 py-2 rounded"><span>📝</span> Sales Order</a>
@@ -184,10 +188,69 @@
         <div class="bg-white rounded-lg p-4 shadow">
           <div class="flex justify-between mb-4">
             <h3 class="font-semibold">Chart of Account</h3>
-            <button onclick="exportExcel('tblCOA','coa')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+            <div class="flex gap-2">
+              <button onclick="exportExcel('tblCOA','coa')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+            </div>
           </div>
+          <div class="info-banner mb-3 text-xs">📋 Edit nama akun di sini akan <strong>otomatis update</strong> di Master Jenis Beban / Kategori Aset.</div>
           <table class="w-full text-sm" id="tblCOA">
-            <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Kode</th><th class="text-left p-2">Nama Akun</th><th class="text-left p-2">Kategori</th><th class="text-left p-2">Saldo Normal</th></tr></thead>
+            <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Kode</th><th class="text-left p-2">Nama Akun</th><th class="text-left p-2">Kategori</th><th class="text-left p-2">Saldo Normal</th><th class="text-center p-2">Sumber</th><th class="text-center p-2">Aksi</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-jenis-beban" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4">
+            <h3 class="font-semibold">💸 Master Jenis Beban</h3>
+            <div class="flex gap-2">
+              <button onclick="exportExcel('tblJenisBeban','jenis-beban')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+              <button onclick="openModalJenisBeban()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm btn-add">+ Tambah Jenis Beban</button>
+            </div>
+          </div>
+          <div class="info-banner mb-3">
+            💡 <strong>Cara pakai:</strong> Tambah jenis beban baru di sini. Sistem otomatis akan membuat akun COA baru. Jenis beban yang <strong>nonaktif</strong> tidak akan muncul di form Beban Operasional.
+          </div>
+          <table class="w-full text-sm" id="tblJenisBeban">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr>
+                <th class="text-left p-2">Kode Akun</th>
+                <th class="text-left p-2">Nama Jenis Beban</th>
+                <th class="text-left p-2">Keterangan</th>
+                <th class="text-center p-2">Status</th>
+                <th class="text-center p-2">Aksi</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="page-kategori-aset" class="page hidden">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex justify-between mb-4">
+            <h3 class="font-semibold">🏢 Master Kategori Aset</h3>
+            <div class="flex gap-2">
+              <button onclick="exportExcel('tblKategoriAset','kategori-aset')" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
+              <button onclick="openModalKategoriAset()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm btn-add">+ Tambah Kategori Aset</button>
+            </div>
+          </div>
+          <div class="info-banner mb-3">
+            💡 <strong>Cara pakai:</strong> Tambah kategori aset di sini. Sistem otomatis membuat 2 akun COA: <strong>Akun Aset</strong> (debit) + <strong>Akun Akumulasi</strong> (kredit). Kategori nonaktif tidak muncul di form Aset Tetap.
+          </div>
+          <table class="w-full text-sm" id="tblKategoriAset">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr>
+                <th class="text-left p-2">Kode</th>
+                <th class="text-left p-2">Nama Kategori</th>
+                <th class="text-left p-2">Akun Aset</th>
+                <th class="text-left p-2">Akun Akumulasi</th>
+                <th class="text-center p-2">Umur Default</th>
+                <th class="text-center p-2">Status</th>
+                <th class="text-center p-2">Aksi</th>
+              </tr>
+            </thead>
             <tbody></tbody>
           </table>
         </div>
@@ -248,7 +311,7 @@
               <button onclick="openModalBeban()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm btn-add">+ Tambah Beban</button>
             </div>
           </div>
-          <div class="info-banner mb-3">💡 Input pengeluaran rutin (gaji, listrik, sewa, transportasi). Jurnal otomatis dibuat.</div>
+          <div class="info-banner mb-3">💡 Input pengeluaran rutin. Jenis beban diambil dari <strong>Master Jenis Beban</strong>.</div>
           <div class="grid grid-cols-3 gap-3 mb-4 text-sm">
             <div class="bg-orange-50 p-3 rounded"><div class="text-xs text-slate-500">Total Beban Bulan Ini</div><div class="font-bold text-orange-700" id="bebanTotal">Rp 0</div></div>
             <div class="bg-blue-50 p-3 rounded"><div class="text-xs text-slate-500">Jumlah Transaksi</div><div class="font-bold text-blue-700" id="bebanCount">0</div></div>
@@ -273,7 +336,7 @@
               <button onclick="prosesPenyusutan()" class="bg-purple-600 text-white px-3 py-1.5 rounded text-sm btn-add">⚙ Proses Penyusutan Bulan Ini</button>
             </div>
           </div>
-          <div class="info-banner mb-3">💡 <strong>Penyusutan Otomatis:</strong> Klik <strong>"⚙ Proses Penyusutan"</strong> untuk hitung penyusutan semua aset bulan ini (Garis Lurus). 1x per bulan.</div>
+          <div class="info-banner mb-3">💡 Kategori aset diambil dari <strong>Master Kategori Aset</strong>. Klik <strong>"⚙ Proses Penyusutan"</strong> untuk hitung penyusutan otomatis (Garis Lurus, 1x/bulan).</div>
           <div class="grid grid-cols-4 gap-3 mb-4 text-sm">
             <div class="bg-blue-50 p-3 rounded"><div class="text-xs text-slate-500">Total Perolehan</div><div class="font-bold text-blue-700" id="asetTotalPerolehan">Rp 0</div></div>
             <div class="bg-red-50 p-3 rounded"><div class="text-xs text-slate-500">Akumulasi Penyusutan</div><div class="font-bold text-red-700" id="asetTotalAkum">Rp 0</div></div>
@@ -289,7 +352,6 @@
         </div>
       </section>
 
-      <!-- JURNAL UMUM dengan filter periode -->
       <section id="page-jurnal" class="page hidden">
         <div class="period-selector">
           <label class="text-sm font-semibold text-slate-700 mb-2 block">📅 Pilih Periode:</label>
@@ -297,7 +359,7 @@
             <select id="jurnalPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold">
               <option value="">-- Pilih Bulan --</option>
             </select>
-            <span class="text-slate-400 text-xs">atau rentang custom:</span>
+            <span class="text-slate-400 text-xs">atau:</span>
             <input type="date" id="jurnalDari" class="border rounded p-1.5 text-sm">
             <span class="text-slate-400">s/d</span>
             <input type="date" id="jurnalSampai" class="border rounded p-1.5 text-sm">
@@ -314,46 +376,32 @@
             </div>
           </div>
           <table class="w-full text-sm" id="tblJurnal">
-            <thead class="bg-slate-100 text-slate-600">
-              <tr><th class="text-left p-2">Tanggal</th><th class="text-left p-2">No. Jurnal</th><th class="text-left p-2">Keterangan</th><th class="text-left p-2">Akun</th><th class="text-right p-2">Debit</th><th class="text-right p-2">Kredit</th></tr>
-            </thead>
+            <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Tanggal</th><th class="text-left p-2">No. Jurnal</th><th class="text-left p-2">Keterangan</th><th class="text-left p-2">Akun</th><th class="text-right p-2">Debit</th><th class="text-right p-2">Kredit</th></tr></thead>
             <tbody></tbody>
-            <tfoot class="bg-slate-200 font-bold">
-              <tr><td colspan="4" class="text-right p-2">TOTAL</td><td class="text-right p-2" id="jurnalTotalD">Rp 0</td><td class="text-right p-2" id="jurnalTotalK">Rp 0</td></tr>
-            </tfoot>
+            <tfoot class="bg-slate-200 font-bold"><tr><td colspan="4" class="text-right p-2">TOTAL</td><td class="text-right p-2" id="jurnalTotalD">Rp 0</td><td class="text-right p-2" id="jurnalTotalK">Rp 0</td></tr></tfoot>
           </table>
         </div>
       </section>
 
-      <!-- BUKU BESAR dengan filter periode -->
       <section id="page-buku-besar" class="page hidden">
         <div class="period-selector">
           <label class="text-sm font-semibold text-slate-700 mb-2 block">📅 Pilih Periode:</label>
           <div class="flex gap-2 items-center flex-wrap">
-            <select id="bbPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold">
-              <option value="">-- Pilih Bulan --</option>
-            </select>
-            <select id="bbAkun" class="border rounded px-3 py-2 text-sm">
-              <option value="">-- Semua Akun --</option>
-            </select>
+            <select id="bbPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold"><option value="">-- Pilih Bulan --</option></select>
+            <select id="bbAkun" class="border rounded px-3 py-2 text-sm"><option value="">-- Semua Akun --</option></select>
             <button onclick="renderBukuBesar()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold">🔍 Tampilkan</button>
             <button onclick="exportBukuBesar()" class="bg-green-600 text-white px-3 py-2 rounded text-sm">⬇ Excel</button>
           </div>
           <div class="text-xs text-slate-500 mt-2" id="bbInfo"></div>
         </div>
-        <div class="bg-white rounded-lg p-4 shadow">
-          <div id="bukuBesarContainer"></div>
-        </div>
+        <div class="bg-white rounded-lg p-4 shadow"><div id="bukuBesarContainer"></div></div>
       </section>
 
-      <!-- TRIAL BALANCE dengan filter periode -->
       <section id="page-trial" class="page hidden">
         <div class="period-selector">
           <label class="text-sm font-semibold text-slate-700 mb-2 block">📅 Pilih Periode:</label>
           <div class="flex gap-2 items-center flex-wrap">
-            <select id="tbPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold">
-              <option value="">-- Pilih Bulan --</option>
-            </select>
+            <select id="tbPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold"><option value="">-- Pilih Bulan --</option></select>
             <button onclick="renderTrial()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold">🔍 Tampilkan</button>
             <button onclick="exportExcel('tblTrial','trial-balance')" class="bg-green-600 text-white px-3 py-2 rounded text-sm">⬇ Excel</button>
           </div>
@@ -361,13 +409,9 @@
         </div>
         <div class="bg-white rounded-lg p-4 shadow">
           <table class="w-full text-sm" id="tblTrial">
-            <thead class="bg-slate-100 text-slate-600">
-              <tr><th class="text-left p-2">Kode</th><th class="text-left p-2">Nama Akun</th><th class="text-right p-2">Debit</th><th class="text-right p-2">Kredit</th></tr>
-            </thead>
+            <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Kode</th><th class="text-left p-2">Nama Akun</th><th class="text-right p-2">Debit</th><th class="text-right p-2">Kredit</th></tr></thead>
             <tbody></tbody>
-            <tfoot class="bg-slate-200 font-bold">
-              <tr><td colspan="2" class="text-right p-2">TOTAL</td><td class="text-right p-2" id="totalDebit">Rp 0</td><td class="text-right p-2" id="totalKredit">Rp 0</td></tr>
-            </tfoot>
+            <tfoot class="bg-slate-200 font-bold"><tr><td colspan="2" class="text-right p-2">TOTAL</td><td class="text-right p-2" id="totalDebit">Rp 0</td><td class="text-right p-2" id="totalKredit">Rp 0</td></tr></tfoot>
           </table>
         </div>
       </section>
@@ -389,22 +433,13 @@
             <div class="bg-green-50 p-3 rounded"><div class="text-xs text-slate-500">Laba Kotor</div><div class="font-bold text-green-700" id="lapJualLaba">Rp 0</div></div>
           </div>
           <div class="mb-4"><h4 class="font-semibold text-sm mb-2">Rekap per Customer</h4>
-            <table class="w-full text-sm" id="tblLapJualCust">
-              <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Customer</th><th class="text-right p-2">Total</th></tr></thead>
-              <tbody></tbody>
-            </table>
+            <table class="w-full text-sm" id="tblLapJualCust"><thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Customer</th><th class="text-right p-2">Total</th></tr></thead><tbody></tbody></table>
           </div>
           <div class="mb-4"><h4 class="font-semibold text-sm mb-2">Rekap per Produk</h4>
-            <table class="w-full text-sm" id="tblLapJualProd">
-              <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Produk</th><th class="text-right p-2">Qty</th><th class="text-right p-2">Penjualan</th><th class="text-right p-2">HPP</th><th class="text-right p-2">Laba</th></tr></thead>
-              <tbody></tbody>
-            </table>
+            <table class="w-full text-sm" id="tblLapJualProd"><thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Produk</th><th class="text-right p-2">Qty</th><th class="text-right p-2">Penjualan</th><th class="text-right p-2">HPP</th><th class="text-right p-2">Laba</th></tr></thead><tbody></tbody></table>
           </div>
           <div><h4 class="font-semibold text-sm mb-2">Detail Transaksi</h4>
-            <table class="w-full text-sm" id="tblLapJualDetail">
-              <thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Tanggal</th><th class="text-left p-2">No. Invoice</th><th class="text-left p-2">Customer</th><th class="text-left p-2">Supplier</th><th class="text-left p-2">Produk</th><th class="text-right p-2">Qty</th><th class="text-right p-2">H. Jual</th><th class="text-right p-2">H. Beli</th><th class="text-right p-2">Laba</th></tr></thead>
-              <tbody></tbody>
-            </table>
+            <table class="w-full text-sm" id="tblLapJualDetail"><thead class="bg-slate-100 text-slate-600"><tr><th class="text-left p-2">Tanggal</th><th class="text-left p-2">No. Invoice</th><th class="text-left p-2">Customer</th><th class="text-left p-2">Supplier</th><th class="text-left p-2">Produk</th><th class="text-right p-2">Qty</th><th class="text-right p-2">H. Jual</th><th class="text-right p-2">H. Beli</th><th class="text-right p-2">Laba</th></tr></thead><tbody></tbody></table>
           </div>
         </div>
       </section>
@@ -423,23 +458,18 @@
         </div>
       </section>
 
-      <!-- NERACA dengan filter periode -->
       <section id="page-neraca" class="page hidden">
         <div class="period-selector max-w-4xl mx-auto">
           <label class="text-sm font-semibold text-slate-700 mb-2 block">📅 Pilih Periode Neraca:</label>
           <div class="flex gap-2 items-center flex-wrap">
-            <select id="neracaPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold">
-              <option value="">-- Pilih Bulan --</option>
-            </select>
+            <select id="neracaPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold"><option value="">-- Pilih Bulan --</option></select>
             <button onclick="renderNeraca()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold">🔍 Tampilkan</button>
             <button onclick="exportNeraca()" class="bg-green-600 text-white px-3 py-2 rounded text-sm">⬇ Excel</button>
           </div>
           <div class="text-xs text-slate-500 mt-2" id="neracaInfo"></div>
         </div>
         <div class="bg-white rounded-lg p-4 shadow max-w-4xl mx-auto">
-          <div class="flex justify-between mb-4">
-            <div class="text-center flex-1"><h3 class="font-bold text-lg">PT PKP</h3><p class="text-sm text-slate-600">Neraca</p><p class="text-xs text-slate-500" id="neracaTgl">Per: -</p></div>
-          </div>
+          <div class="text-center mb-4"><h3 class="font-bold text-lg">PT PKP</h3><p class="text-sm text-slate-600">Neraca</p><p class="text-xs text-slate-500" id="neracaTgl">Per: -</p></div>
           <div class="grid grid-cols-2 gap-6">
             <div><h4 class="font-semibold bg-slate-100 p-2">ASET</h4><table class="w-full text-sm mt-2" id="tblAsetNeraca"><tbody></tbody></table></div>
             <div><h4 class="font-semibold bg-slate-100 p-2">KEWAJIBAN & EKUITAS</h4><table class="w-full text-sm mt-2" id="tblKewajiban"><tbody></tbody></table></div>
@@ -452,14 +482,11 @@
         </div>
       </section>
 
-      <!-- ARUS KAS dengan filter periode -->
       <section id="page-aruskas" class="page hidden">
         <div class="period-selector max-w-2xl mx-auto">
           <label class="text-sm font-semibold text-slate-700 mb-2 block">📅 Pilih Periode:</label>
           <div class="flex gap-2 items-center flex-wrap">
-            <select id="akPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold">
-              <option value="">-- Pilih Bulan --</option>
-            </select>
+            <select id="akPeriode" class="border-2 border-blue-500 rounded px-3 py-2 text-sm font-semibold"><option value="">-- Pilih Bulan --</option></select>
             <button onclick="renderArusKas()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold">🔍 Tampilkan</button>
             <button onclick="exportExcel('tblArusKas','arus-kas')" class="bg-green-600 text-white px-3 py-2 rounded text-sm">⬇ Excel</button>
           </div>
@@ -519,6 +546,8 @@
                 <option>BEBAN DIBUAT</option><option>BEBAN DIUBAH</option><option>BEBAN DIHAPUS</option>
                 <option>ASET DIBUAT</option><option>ASET DIUBAH</option><option>ASET DIHAPUS</option>
                 <option>PENYUSUTAN</option>
+                <option>JENIS BEBAN</option><option>KATEGORI ASET</option>
+                <option>COA DIUBAH</option>
               </select>
               <button onclick="renderAuditLog()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm">🔍 Filter</button>
               <button onclick="exportAuditLog()" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm">⬇ Excel</button>
@@ -586,10 +615,88 @@
   </div>
 </div>
 
+<!-- Modal Edit COA -->
+<div id="modalEditCOA" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[480px]">
+    <h3 class="font-bold mb-3">✏ Edit Akun COA</h3>
+    <div id="editCOAInfo" class="bg-slate-50 p-3 rounded mb-3 text-xs"></div>
+    <label class="text-xs font-semibold">Kode Akun *</label>
+    <input id="editCOAKode" class="border w-full p-2 rounded mb-2 text-sm">
+    <label class="text-xs font-semibold">Nama Akun *</label>
+    <input id="editCOANama" class="border w-full p-2 rounded mb-2 text-sm">
+    <label class="text-xs font-semibold">Kategori</label>
+    <input id="editCOATipe" class="border w-full p-2 rounded mb-2 text-sm bg-slate-100" readonly>
+    <div class="text-xs text-slate-500 mb-3">Kategori tidak bisa diubah untuk akun yang sudah dipakai.</div>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalEditCOA')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="saveEditCOA()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Jenis Beban -->
+<div id="modalJenisBeban" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[520px]">
+    <h3 class="font-bold mb-3" id="jenisBebanModalTitle">💸 Tambah Jenis Beban</h3>
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-2 mb-3 text-xs">
+      Sistem otomatis akan membuat akun COA baru dengan tipe "Beban Operasional". Kode akun bisa dibiarkan kosong (auto-generate).
+    </div>
+    <label class="text-xs font-semibold">Nama Jenis Beban *</label>
+    <input id="jbNama" placeholder="Contoh: Beban BPJS Kesehatan" class="border w-full p-2 rounded mb-2 text-sm">
+    <label class="text-xs font-semibold">Kode Akun (opsional)</label>
+    <input id="jbKode" placeholder="Kosongkan untuk auto-generate" class="border w-full p-2 rounded mb-2 text-sm">
+    <label class="text-xs font-semibold">Keterangan</label>
+    <textarea id="jbKeterangan" rows="2" placeholder="Deskripsi singkat" class="border w-full p-2 rounded mb-3 text-sm"></textarea>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalJenisBeban')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="saveJenisBeban()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Kategori Aset -->
+<div id="modalKategoriAset" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-[600px]">
+    <h3 class="font-bold mb-3" id="kategoriAsetModalTitle">🏢 Tambah Kategori Aset</h3>
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-2 mb-3 text-xs">
+      Sistem otomatis akan membuat <strong>2 akun COA</strong>: Akun Aset (debit) + Akun Akumulasi Penyusutan (kredit). Kode bisa dibiarkan kosong (auto-generate).
+    </div>
+    <label class="text-xs font-semibold">Nama Kategori *</label>
+    <input id="kaNama" placeholder="Contoh: AC & Elektronik" class="border w-full p-2 rounded mb-2 text-sm">
+    <div class="grid grid-cols-3 gap-3 mb-2">
+      <div>
+        <label class="text-xs font-semibold">Kode Kategori</label>
+        <input id="kaKode" placeholder="Auto" class="border w-full p-2 rounded text-sm">
+      </div>
+      <div>
+        <label class="text-xs font-semibold">Akun Aset</label>
+        <input id="kaAkunAset" placeholder="Auto" class="border w-full p-2 rounded text-sm">
+      </div>
+      <div>
+        <label class="text-xs font-semibold">Akun Akumulasi</label>
+        <input id="kaAkunAkum" placeholder="Auto" class="border w-full p-2 rounded text-sm">
+      </div>
+    </div>
+    <label class="text-xs font-semibold">Umur Ekonomis Default *</label>
+    <select id="kaUmur" class="border w-full p-2 rounded mb-2 text-sm">
+      <option value="4">4 tahun (Komputer)</option>
+      <option value="5">5 tahun (Peralatan, Furnitur)</option>
+      <option value="8">8 tahun (Kendaraan, Mesin)</option>
+      <option value="20">20 tahun (Bangunan)</option>
+    </select>
+    <label class="text-xs font-semibold">Keterangan</label>
+    <textarea id="kaKeterangan" rows="2" class="border w-full p-2 rounded mb-3 text-sm"></textarea>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeModal('modalKategoriAset')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
+      <button onclick="saveKategoriAset()" class="px-3 py-1.5 text-sm rounded bg-blue-600 text-white">Simpan</button>
+    </div>
+  </div>
+</div>
+
 <div id="modalSO" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
   <div class="bg-white rounded-lg p-6 w-[1000px] max-h-[90vh] overflow-y-auto">
     <h3 class="font-bold mb-3" id="soModalTitle">Buat Sales Order</h3>
-    <div class="bg-blue-50 border-l-4 border-blue-400 p-2 mb-3 text-xs">Isi <strong>Customer</strong>, <strong>Supplier</strong>, dan <strong>harga beli</strong> per produk.</div>
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-2 mb-3 text-xs">Isi Customer, Supplier, harga beli & jual.</div>
     <div class="grid grid-cols-2 gap-3 mb-3">
       <div><label class="text-xs font-semibold">Customer *</label><select id="soCustomer" class="border w-full p-2 rounded text-sm"></select></div>
       <div><label class="text-xs font-semibold">Tanggal</label><input id="soTanggal" type="date" class="border w-full p-2 rounded text-sm"></div>
@@ -637,30 +744,16 @@
 <div id="modalAset" class="modal fixed inset-0 bg-black/50 items-center justify-center z-50">
   <div class="bg-white rounded-lg p-6 w-[600px]">
     <h3 class="font-bold mb-3" id="asetModalTitle">🏢 Tambah Aset Tetap</h3>
-    <div class="bg-blue-50 border-l-4 border-blue-400 p-2 mb-3 text-xs">Isi untuk aset > Rp 5jt. Untuk < Rp 5jt gunakan menu <strong>Beban Operasional</strong>.</div>
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-2 mb-3 text-xs">Isi untuk aset > Rp 5jt. Untuk < Rp 5jt gunakan menu Beban Operasional.</div>
     <div class="grid grid-cols-2 gap-3 mb-2">
       <div><label class="text-xs font-semibold">Tanggal Beli *</label><input id="asetTanggal" type="date" class="border w-full p-2 rounded text-sm"></div>
-      <div><label class="text-xs font-semibold">Kategori *</label>
-        <select id="asetKategori" class="border w-full p-2 rounded text-sm">
-          <option value="121">121 - Peralatan</option>
-          <option value="121A">121A - Komputer & Laptop</option>
-          <option value="121B">121B - Kendaraan</option>
-          <option value="121C">121C - Furnitur</option>
-        </select>
-      </div>
+      <div><label class="text-xs font-semibold">Kategori *</label><select id="asetKategori" class="border w-full p-2 rounded text-sm"></select></div>
     </div>
     <label class="text-xs font-semibold">Nama Aset *</label>
     <input id="asetNama" class="border w-full p-2 rounded mb-2 text-sm">
     <div class="grid grid-cols-2 gap-3 mb-2">
       <div><label class="text-xs font-semibold">Harga Perolehan (Rp) *</label><input id="asetHarga" type="number" class="border w-full p-2 rounded text-sm"></div>
-      <div><label class="text-xs font-semibold">Umur Ekonomis *</label>
-        <select id="asetUmur" class="border w-full p-2 rounded text-sm">
-          <option value="4">4 tahun (Komputer)</option>
-          <option value="5">5 tahun (Peralatan, Furnitur)</option>
-          <option value="8">8 tahun (Kendaraan)</option>
-          <option value="20">20 tahun (Bangunan)</option>
-        </select>
-      </div>
+      <div><label class="text-xs font-semibold">Umur Ekonomis *</label><select id="asetUmur" class="border w-full p-2 rounded text-sm"></select></div>
     </div>
     <label class="text-xs font-semibold">Keterangan</label>
     <textarea id="asetKeterangan" rows="2" class="border w-full p-2 rounded mb-3 text-sm"></textarea>
@@ -685,9 +778,9 @@
     <input id="fakturPembulatan" type="number" class="border w-full p-2 rounded mb-1 text-sm" oninput="previewFakturPembulatan()">
     <div id="fakturPembulatanInfo" class="text-xs mb-3"></div>
     <div class="bg-blue-50 p-3 rounded mb-3 text-sm">
-      <div class="flex justify-between"><span>Nilai Invoice Sebelum</span><span id="fakturSebelum" class="font-semibold">Rp 0</span></div>
+      <div class="flex justify-between"><span>Sebelum</span><span id="fakturSebelum" class="font-semibold">Rp 0</span></div>
       <div class="flex justify-between"><span>Pembulatan</span><span id="fakturDelta" class="font-semibold">Rp 0</span></div>
-      <div class="flex justify-between border-t border-blue-200 mt-1 pt-1"><span class="font-bold">Nilai Invoice Setelah</span><span id="fakturSesudah" class="font-bold text-blue-700">Rp 0</span></div>
+      <div class="flex justify-between border-t border-blue-200 mt-1 pt-1"><span class="font-bold">Setelah</span><span id="fakturSesudah" class="font-bold text-blue-700">Rp 0</span></div>
     </div>
     <div class="flex gap-2 justify-end">
       <button onclick="closeModal('modalFakturPajak')" class="px-3 py-1.5 text-sm rounded bg-slate-200">Batal</button>
@@ -742,10 +835,7 @@
 <div id="modalInvoicePrint" class="modal fixed inset-0 bg-black/70 items-start justify-center z-50 overflow-y-auto">
   <div class="bg-slate-50 rounded-lg w-full max-w-4xl my-6 mx-4 shadow-2xl overflow-hidden">
     <div class="print-toolbar print-toolbar-top flex items-center justify-between gap-3 flex-wrap">
-      <div class="flex items-center gap-3">
-        <div class="text-2xl">🧾</div>
-        <div><h3 class="font-bold text-slate-800">Preview Invoice</h3><p class="text-xs text-slate-500" id="printCounter">1 dari 1</p></div>
-      </div>
+      <div class="flex items-center gap-3"><div class="text-2xl">🧾</div><div><h3 class="font-bold text-slate-800">Preview Invoice</h3><p class="text-xs text-slate-500" id="printCounter">1 dari 1</p></div></div>
       <div class="flex items-center gap-2 flex-wrap">
         <button onclick="printCurrentBatch()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold">🖨 Print Semua</button>
         <button onclick="downloadCurrentBatchPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-semibold">📥 Download PDF</button>
@@ -783,39 +873,9 @@
    ========================================================= */
 const DB = {
   customers: [], suppliers: [], products: [],
-  coa: [
-    { kode: '101', nama: 'Kas / Bank', tipe: 'Aset Lancar', normal: 'D' },
-    { kode: '102', nama: 'Piutang Dagang', tipe: 'Aset Lancar', normal: 'D' },
-    { kode: '104', nama: 'PPN Masukan', tipe: 'Aset Lancar', normal: 'D' },
-    { kode: '105', nama: 'Perlengkapan', tipe: 'Aset Lancar', normal: 'D' },
-    { kode: '121', nama: 'Peralatan', tipe: 'Aset Tetap', normal: 'D' },
-    { kode: '121A', nama: 'Komputer & Laptop', tipe: 'Aset Tetap', normal: 'D' },
-    { kode: '121B', nama: 'Kendaraan', tipe: 'Aset Tetap', normal: 'D' },
-    { kode: '121C', nama: 'Furnitur', tipe: 'Aset Tetap', normal: 'D' },
-    { kode: '122', nama: 'Akumulasi Penyusutan Peralatan', tipe: 'Aset Tetap', normal: 'K' },
-    { kode: '122A', nama: 'Akum. Penyusutan Komputer & Laptop', tipe: 'Aset Tetap', normal: 'K' },
-    { kode: '122B', nama: 'Akum. Penyusutan Kendaraan', tipe: 'Aset Tetap', normal: 'K' },
-    { kode: '122C', nama: 'Akum. Penyusutan Furnitur', tipe: 'Aset Tetap', normal: 'K' },
-    { kode: '201', nama: 'Hutang Dagang', tipe: 'Kewajiban Lancar', normal: 'K' },
-    { kode: '202', nama: 'PPN Keluaran', tipe: 'Kewajiban Lancar', normal: 'K' },
-    { kode: '203', nama: 'Hutang Pajak (PPh 21/23)', tipe: 'Kewajiban Lancar', normal: 'K' },
-    { kode: '301', nama: 'Modal Disetor', tipe: 'Ekuitas', normal: 'K' },
-    { kode: '302', nama: 'Prive / Dividen', tipe: 'Ekuitas', normal: 'D' },
-    { kode: '303', nama: 'Laba Ditahan', tipe: 'Ekuitas', normal: 'K' },
-    { kode: '401', nama: 'Penjualan', tipe: 'Pendapatan', normal: 'K' },
-    { kode: '402', nama: 'Retur Penjualan', tipe: 'Pendapatan', normal: 'D' },
-    { kode: '403', nama: 'Diskon Penjualan', tipe: 'Pendapatan', normal: 'D' },
-    { kode: '501', nama: 'Harga Pokok Penjualan (HPP)', tipe: 'HPP', normal: 'D' },
-    { kode: '601', nama: 'Beban Gaji & Tunjangan', tipe: 'Beban Operasional', normal: 'D' },
-    { kode: '602', nama: 'Beban Sewa', tipe: 'Beban Operasional', normal: 'D' },
-    { kode: '603', nama: 'Beban Listrik, Air & Telepon', tipe: 'Beban Operasional', normal: 'D' },
-    { kode: '604', nama: 'Beban Transportasi', tipe: 'Beban Operasional', normal: 'D' },
-    { kode: '605', nama: 'Beban Perlengkapan', tipe: 'Beban Operasional', normal: 'D' },
-    { kode: '606', nama: 'Beban Penyusutan', tipe: 'Beban Operasional', normal: 'D' },
-    { kode: '607', nama: 'Beban Administrasi & Umum', tipe: 'Beban Operasional', normal: 'D' },
-    { kode: '608', nama: 'Beban Pajak & Perizinan', tipe: 'Beban Operasional', normal: 'D' },
-    { kode: '701', nama: 'Beban Bunga', tipe: 'Beban Lain', normal: 'D' },
-  ],
+  coa: [],
+  jenisBeban: [],     // { kode, nama, keterangan, status } — kode = akun COA
+  kategoriAset: [],   // { kode, nama, akunAset, akunAkum, umur, keterangan, status }
   so: [], invoice: [], jurnal: [], saldo: {},
   beban: [], aset: [], penyusutanLog: [],
   closedPeriods: [], auditLog: [],
@@ -842,7 +902,6 @@ function getPeriodRange(periode) {
   return { dari: `${y}-${String(m).padStart(2,'0')}-01`, sampai: `${y}-${String(m).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}` };
 }
 function listAvailablePeriods() {
-  // Kumpulkan periode dari transaksi + closedPeriods + bulan ini
   const periods = new Set();
   periods.add(currentMonth());
   DB.jurnal.forEach(j => periods.add(j.tanggal.slice(0,7)));
@@ -853,24 +912,44 @@ function listAvailablePeriods() {
   return Array.from(periods).sort().reverse();
 }
 function getSaldoPeriode(periode) {
-  // Hitung saldo per akun sampai akhir periode tertentu
   const { sampai } = getPeriodRange(periode);
   const saldo = {};
-  DB.jurnal.forEach(j => {
-    if (j.tanggal <= sampai) {
-      saldo[j.akun] = (saldo[j.akun] || 0) + (j.debit - j.kredit);
-    }
-  });
+  DB.jurnal.forEach(j => { if (j.tanggal <= sampai) saldo[j.akun] = (saldo[j.akun] || 0) + (j.debit - j.kredit); });
   return saldo;
 }
 function getJurnalPeriode(periode) {
   const { dari, sampai } = getPeriodRange(periode);
   return DB.jurnal.filter(j => j.tanggal >= dari && j.tanggal <= sampai);
 }
-
 function logAudit(aksi, detail, sebelum = '-', sesudah = '-') {
   DB.counter.audit++;
   DB.auditLog.push({ id: DB.counter.audit, waktu: nowISO(), aksi, user: 'admin', detail, sebelum: String(sebelum), sesudah: String(sesudah) });
+}
+
+/* =========================================================
+   AUTO-GENERATE KODE
+   ========================================================= */
+function generateNextBebanKode() {
+  // Cari kode beban tertinggi di range 600-699
+  const bebanKodes = DB.coa.filter(c => c.tipe === 'Beban Operasional' || c.tipe === 'Beban Lain').map(c => parseInt(c.kode)).filter(n => !isNaN(n));
+  if (bebanKodes.length === 0) return '601';
+  const max = Math.max(...bebanKodes);
+  return String(max + 1);
+}
+function generateNextKategoriAsetKode() {
+  // Format: 121 + huruf (121A, 121B, dst) atau 121X
+  const asetKodes = DB.coa.filter(c => c.tipe === 'Aset Tetap' && c.normal === 'D' && /^121/.test(c.kode)).map(c => c.kode);
+  if (asetKodes.length === 0) return '121A';
+  // Cari huruf tertinggi
+  const letters = asetKodes.map(k => k.replace(/^121/, '')).filter(l => /^[A-Z]$/.test(l));
+  if (letters.length === 0) return '121A';
+  const maxLetter = letters.sort().reverse()[0];
+  const nextChar = String.fromCharCode(maxLetter.charCodeAt(0) + 1);
+  return '121' + nextChar;
+}
+function generateAkumulasiKode(asetKode) {
+  // 121A → 122A, 121B → 122B
+  return asetKode.replace(/^121/, '122');
 }
 
 /* =========================================================
@@ -940,7 +1019,8 @@ function showPage(name, el) {
   if (el) el.classList.add('active');
   const titles = {
     dashboard: 'Dashboard', customer: 'Customer', supplier: 'Supplier', produk: 'Produk',
-    coa: 'Chart of Account', so: 'Sales Order', invoice: 'Invoice Penjualan',
+    coa: 'Chart of Account', 'jenis-beban': 'Master Jenis Beban', 'kategori-aset': 'Master Kategori Aset',
+    so: 'Sales Order', invoice: 'Invoice Penjualan',
     beban: 'Beban Operasional', aset: 'Aset Tetap',
     jurnal: 'Jurnal Umum', 'buku-besar': 'Buku Besar', trial: 'Trial Balance',
     'lap-penjualan': 'Laporan Penjualan', labarugi: 'Laba Rugi', neraca: 'Neraca',
@@ -991,10 +1071,7 @@ function exportBukuBesar() {
   Object.keys(grouped).sort().forEach(kode => {
     const g = grouped[kode];
     let saldo = 0;
-    g.items.forEach(i => {
-      saldo += i.debit - i.kredit;
-      rows.push([kode, g.nama, i.tanggal, i.keterangan, i.debit, i.kredit, saldo]);
-    });
+    g.items.forEach(i => { saldo += i.debit - i.kredit; rows.push([kode, g.nama, i.tanggal, i.keterangan, i.debit, i.kredit, saldo]); });
   });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'BukuBesar');
@@ -1004,9 +1081,7 @@ function exportLapPenjualan() {
   const dari = document.getElementById('lapJualDari').value || '0000-01-01';
   const sampai = document.getElementById('lapJualSampai').value || '9999-12-31';
   const rows = [['LAPORAN PENJUALAN'], [`Periode: ${dari} s/d ${sampai}`], [], ['Tanggal','No Invoice','Customer','Supplier','Produk','Qty','H.Jual','H.Beli','Total Jual','Total Beli','Laba']];
-  getInvoiceLines(dari, sampai).forEach(l => {
-    rows.push([l.tgl, l.invNo, l.customer, l.supplier, l.produkNama, l.qty, l.hargaJual, l.hargaBeli, l.subtotalJual, l.subtotalBeli, l.laba]);
-  });
+  getInvoiceLines(dari, sampai).forEach(l => rows.push([l.tgl, l.invNo, l.customer, l.supplier, l.produkNama, l.qty, l.hargaJual, l.hargaBeli, l.subtotalJual, l.subtotalBeli, l.laba]));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Penjualan');
   XLSX.writeFile(wb, `laporan-penjualan_${dari}_${sampai}.xlsx`);
@@ -1076,6 +1151,219 @@ function addProduk() {
 }
 
 /* =========================================================
+   COA EDIT (sinkron ke master)
+   ========================================================= */
+let editingCOA = null;
+function openEditCOA(kode) {
+  const coa = DB.coa.find(c => c.kode === kode);
+  if (!coa) return;
+  editingCOA = kode;
+  document.getElementById('editCOAInfo').innerHTML = `
+    <div><strong>${coa.kode}</strong> - ${coa.nama}</div>
+    <div class="text-slate-500">Tipe: ${coa.tipe}</div>
+  `;
+  document.getElementById('editCOAKode').value = coa.kode;
+  document.getElementById('editCOANama').value = coa.nama;
+  document.getElementById('editCOATipe').value = coa.tipe;
+  document.getElementById('modalEditCOA').classList.add('active');
+}
+function saveEditCOA() {
+  const coa = DB.coa.find(c => c.kode === editingCOA);
+  if (!coa) return;
+  const newKode = document.getElementById('editCOAKode').value.trim();
+  const newNama = document.getElementById('editCOANama').value.trim();
+  if (!newKode) return alert('Kode wajib');
+  if (!newNama) return alert('Nama wajib');
+  // Cek duplikat kode (kalau berubah)
+  if (newKode !== coa.kode && DB.coa.some(c => c.kode === newKode)) return alert('Kode sudah dipakai');
+  const oldData = `${coa.kode} - ${coa.nama}`;
+  // Update COA
+  coa.kode = newKode;
+  coa.nama = newNama;
+  // Update jurnal yang pakai akun ini
+  DB.jurnal.forEach(j => {
+    if (j.akun === editingCOA) {
+      j.akun = newKode;
+      j.akunNama = newNama;
+    }
+  });
+  // Update saldo
+  if (editingCOA !== newKode) {
+    DB.saldo[newKode] = DB.saldo[editingCOA] || 0;
+    delete DB.saldo[editingCOA];
+  }
+  // Update master jenisBeban
+  if (coa.tipe === 'Beban Operasional' || coa.tipe === 'Beban Lain') {
+    const jb = DB.jenisBeban.find(x => x.kode === editingCOA);
+    if (jb) { jb.kode = newKode; jb.nama = newNama; }
+    // Update beban transaksi yang pakai
+    DB.beban.forEach(b => {
+      if (b.akunKode === editingCOA) { b.akunKode = newKode; b.akunNama = newNama; }
+    });
+  }
+  // Update master kategoriAset
+  const ka = DB.kategoriAset.find(x => x.akunAset === editingCOA || x.akunAkum === editingCOA);
+  if (ka) {
+    if (ka.akunAset === editingCOA) ka.akunAset = newKode;
+    if (ka.akunAkum === editingCOA) ka.akunAkum = newKode;
+  }
+  // Update aset transaksi
+  DB.aset.forEach(a => {
+    if (a.akunAset === editingCOA) { a.akunAset = newKode; a.akunAsetNama = newNama; }
+    if (a.akunAkum === editingCOA) { a.akunAkum = newKode; a.akunAkumNama = newNama; }
+  });
+  logAudit('COA DIUBAH', `Akun ${editingCOA}`, oldData, `${newKode} - ${newNama}`);
+  editingCOA = null;
+  closeModal('modalEditCOA');
+  renderAll();
+  alert('✅ Akun COA berhasil diupdate. Master & transaksi terkait ikut tersinkron.');
+}
+
+/* =========================================================
+   JENIS BEBAN
+   ========================================================= */
+let editingJenisBeban = null;
+function openModalJenisBeban(kode = null) {
+  if (kode) {
+    const jb = DB.jenisBeban.find(x => x.kode === kode);
+    if (!jb) return;
+    editingJenisBeban = kode;
+    document.getElementById('jenisBebanModalTitle').textContent = `✏ Edit Jenis Beban`;
+    document.getElementById('jbNama').value = jb.nama;
+    document.getElementById('jbKode').value = jb.kode;
+    document.getElementById('jbKeterangan').value = jb.keterangan || '';
+  } else {
+    editingJenisBeban = null;
+    document.getElementById('jenisBebanModalTitle').textContent = '💸 Tambah Jenis Beban';
+    document.getElementById('jbNama').value = '';
+    document.getElementById('jbKode').value = '';
+    document.getElementById('jbKeterangan').value = '';
+  }
+  document.getElementById('modalJenisBeban').classList.add('active');
+}
+function saveJenisBeban() {
+  const nama = document.getElementById('jbNama').value.trim();
+  if (!nama) return alert('Nama wajib');
+  const kodeInput = document.getElementById('jbKode').value.trim();
+  const keterangan = document.getElementById('jbKeterangan').value.trim();
+
+  if (editingJenisBeban) {
+    // === EDIT ===
+    const jb = DB.jenisBeban.find(x => x.kode === editingJenisBeban);
+    const coa = DB.coa.find(c => c.kode === editingJenisBeban);
+    const oldData = `${jb.kode} - ${jb.nama}`;
+    jb.nama = nama;
+    jb.keterangan = keterangan;
+    if (coa) coa.nama = nama;
+    // Update transaksi beban
+    DB.beban.forEach(b => { if (b.akunKode === editingJenisBeban) b.akunNama = nama; });
+    logAudit('JENIS BEBAN', `Edit ${editingJenisBeban}`, oldData, `${jb.kode} - ${nama}`);
+    alert('✅ Jenis beban berhasil diupdate');
+  } else {
+    // === CREATE ===
+    const kode = kodeInput || generateNextBebanKode();
+    if (DB.coa.some(c => c.kode === kode)) return alert(`Kode akun ${kode} sudah dipakai`);
+    // Buat akun COA baru
+    DB.coa.push({ kode, nama, tipe: 'Beban Operasional', normal: 'D' });
+    // Simpan ke master
+    DB.jenisBeban.push({ kode, nama, keterangan, status: 'AKTIF' });
+    logAudit('JENIS BEBAN', `Tambah ${kode} - ${nama}`, '-', `Auto-generate akun COA`);
+    alert(`✅ Jenis beban ${kode} - ${nama} berhasil dibuat.\n\nAkun COA otomatis dibuat.`);
+  }
+  editingJenisBeban = null;
+  closeModal('modalJenisBeban');
+  renderAll();
+}
+function toggleJenisBebanStatus(kode) {
+  const jb = DB.jenisBeban.find(x => x.kode === kode);
+  if (!jb) return;
+  const newStatus = jb.status === 'AKTIF' ? 'NONAKTIF' : 'AKTIF';
+  jb.status = newStatus;
+  logAudit('JENIS BEBAN', `Toggle status ${kode}`, jb.status === 'AKTIF' ? 'NONAKTIF' : 'AKTIF', newStatus);
+  renderAll();
+}
+
+/* =========================================================
+   KATEGORI ASET
+   ========================================================= */
+let editingKategoriAset = null;
+function openModalKategoriAset(kode = null) {
+  if (kode) {
+    const ka = DB.kategoriAset.find(x => x.kode === kode);
+    if (!ka) return;
+    editingKategoriAset = kode;
+    document.getElementById('kategoriAsetModalTitle').textContent = `✏ Edit Kategori Aset`;
+    document.getElementById('kaNama').value = ka.nama;
+    document.getElementById('kaKode').value = ka.kode;
+    document.getElementById('kaAkunAset').value = ka.akunAset;
+    document.getElementById('kaAkunAkum').value = ka.akunAkum;
+    document.getElementById('kaUmur').value = ka.umur;
+    document.getElementById('kaKeterangan').value = ka.keterangan || '';
+  } else {
+    editingKategoriAset = null;
+    document.getElementById('kategoriAsetModalTitle').textContent = '🏢 Tambah Kategori Aset';
+    document.getElementById('kaNama').value = '';
+    document.getElementById('kaKode').value = '';
+    document.getElementById('kaAkunAset').value = '';
+    document.getElementById('kaAkunAkum').value = '';
+    document.getElementById('kaUmur').value = '4';
+    document.getElementById('kaKeterangan').value = '';
+  }
+  document.getElementById('modalKategoriAset').classList.add('active');
+}
+function saveKategoriAset() {
+  const nama = document.getElementById('kaNama').value.trim();
+  if (!nama) return alert('Nama wajib');
+  const kodeInput = document.getElementById('kaKode').value.trim();
+  const akunAsetInput = document.getElementById('kaAkunAset').value.trim();
+  const akunAkumInput = document.getElementById('kaAkunAkum').value.trim();
+  const umur = parseInt(document.getElementById('kaUmur').value) || 4;
+  const keterangan = document.getElementById('kaKeterangan').value.trim();
+
+  if (editingKategoriAset) {
+    // === EDIT ===
+    const ka = DB.kategoriAset.find(x => x.kode === editingKategoriAset);
+    const oldData = `${ka.kode} - ${ka.nama}`;
+    ka.nama = nama;
+    ka.umur = umur;
+    ka.keterangan = keterangan;
+    // Update COA nama
+    const coaA = DB.coa.find(c => c.kode === ka.akunAset);
+    if (coaA) coaA.nama = nama;
+    // Update transaksi aset
+    DB.aset.forEach(a => { if (a.kategori === editingKategoriAset) { a.akunAsetNama = nama; a.umur = umur; a.penyusutanBulanan = a.harga / (umur * 12); } });
+    logAudit('KATEGORI ASET', `Edit ${editingKategoriAset}`, oldData, `${ka.kode} - ${nama}`);
+    alert('✅ Kategori aset berhasil diupdate');
+  } else {
+    // === CREATE ===
+    const kode = kodeInput || generateNextKategoriAsetKode();
+    if (DB.kategoriAset.some(k => k.kode === kode)) return alert(`Kode kategori ${kode} sudah dipakai`);
+    const akunAset = akunAsetInput || kode;
+    const akunAkum = akunAkumInput || generateAkumulasiKode(akunAset);
+    if (DB.coa.some(c => c.kode === akunAset)) return alert(`Akun aset ${akunAset} sudah ada di COA`);
+    if (DB.coa.some(c => c.kode === akunAkum)) return alert(`Akun akumulasi ${akunAkum} sudah ada di COA`);
+    // Buat 2 akun COA
+    DB.coa.push({ kode: akunAset, nama, tipe: 'Aset Tetap', normal: 'D' });
+    DB.coa.push({ kode: akunAkum, nama: `Akum. Penyusutan ${nama}`, tipe: 'Aset Tetap', normal: 'K' });
+    // Simpan ke master
+    DB.kategoriAset.push({ kode, nama, akunAset, akunAkum, umur, keterangan, status: 'AKTIF' });
+    logAudit('KATEGORI ASET', `Tambah ${kode} - ${nama}`, '-', `Akun: ${akunAset}/${akunAkum}`);
+    alert(`✅ Kategori aset ${kode} - ${nama} berhasil dibuat.\n\n2 akun COA otomatis dibuat:\n- ${akunAset} (Aset)\n- ${akunAkum} (Akumulasi)`);
+  }
+  editingKategoriAset = null;
+  closeModal('modalKategoriAset');
+  renderAll();
+}
+function toggleKategoriAsetStatus(kode) {
+  const ka = DB.kategoriAset.find(x => x.kode === kode);
+  if (!ka) return;
+  const newStatus = ka.status === 'AKTIF' ? 'NONAKTIF' : 'AKTIF';
+  ka.status = newStatus;
+  logAudit('KATEGORI ASET', `Toggle status ${kode}`, ka.status === 'AKTIF' ? 'NONAKTIF' : 'AKTIF', newStatus);
+  renderAll();
+}
+
+/* =========================================================
    SO
    ========================================================= */
 let editingSO = null;
@@ -1114,7 +1402,6 @@ function calcSOTotal() {
   document.getElementById('soTotalLaba').textContent = fmt(totalJual - totalBeli);
   return { totalBeli, totalJual, totalLaba: totalJual - totalBeli };
 }
-function openCreateSO() { editingSO = null; openModal('modalSO'); }
 function openEditSO(soNo) {
   const so = DB.so.find(s => s.no === soNo);
   if (!so) return;
@@ -1253,13 +1540,16 @@ function deleteSelectedInvoices() {
 }
 
 /* =========================================================
-   BEBAN OPERASIONAL (CRUD)
+   BEBAN OPERASIONAL
    ========================================================= */
 let editingBeban = null;
 function openModalBeban(bebanNo = null) {
   if (DB.isClosed) return alert('🔒 Periode tertutup.');
-  const bebanAccounts = DB.coa.filter(c => c.tipe === 'Beban Operasional' || c.tipe === 'Beban Lain');
-  document.getElementById('bebanJenis').innerHTML = bebanAccounts.map(c => `<option value="${c.kode}">${c.kode} - ${c.nama}</option>`).join('');
+  // Ambil dari master jenisBeban yang AKTIF
+  const aktifBeban = DB.jenisBeban.filter(jb => jb.status === 'AKTIF');
+  document.getElementById('bebanJenis').innerHTML = aktifBeban.length > 0
+    ? aktifBeban.map(jb => `<option value="${jb.kode}">${jb.kode} - ${jb.nama}</option>`).join('')
+    : '<option value="">-- Belum ada jenis beban aktif, tambah dulu di Master Jenis Beban --</option>';
   if (bebanNo) {
     const b = DB.beban.find(x => x.no === bebanNo);
     if (!b) return;
@@ -1284,25 +1574,21 @@ function saveBeban() {
   const jenisKode = document.getElementById('bebanJenis').value;
   const keterangan = document.getElementById('bebanKeterangan').value.trim();
   const jumlah = parseFloat(document.getElementById('bebanJumlah').value) || 0;
+  if (!jenisKode) return alert('Pilih jenis beban. Jika belum ada, tambah di menu Master Jenis Beban.');
   if (!keterangan) return alert('Keterangan wajib');
   if (jumlah <= 0) return alert('Jumlah harus > 0');
   const akun = DB.coa.find(c => c.kode === jenisKode);
-  
   if (editingBeban) {
-    // === EDIT ===
     const b = DB.beban.find(x => x.no === editingBeban);
     const oldData = `Jenis: ${b.akunNama}, Jumlah: ${fmt(b.jumlah)}, Ket: ${b.keterangan}`;
-    // Hapus jurnal lama
     const jurnalLama = DB.jurnal.filter(j => j.keterangan.startsWith(`Beban ${b.akunNama} - ${b.keterangan}`));
     jurnalLama.forEach(j => { DB.saldo[j.akun] = (DB.saldo[j.akun] || 0) - (j.debit - j.kredit); });
     DB.jurnal = DB.jurnal.filter(j => !jurnalLama.includes(j));
-    // Update beban
     b.tanggal = tgl;
     b.akunKode = jenisKode;
     b.akunNama = akun.nama;
     b.keterangan = keterangan;
     b.jumlah = jumlah;
-    // Buat jurnal baru
     postJurnal(tgl, `Beban ${akun.nama} - ${keterangan}`, [
       { akun: akun.kode, nama: akun.nama, debit: jumlah, kredit: 0 },
       { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: jumlah },
@@ -1310,7 +1596,6 @@ function saveBeban() {
     logAudit('BEBAN DIUBAH', `${b.no}`, oldData, `Jenis: ${akun.nama}, Jumlah: ${fmt(jumlah)}`);
     alert(`✅ Beban ${b.no} berhasil diupdate.`);
   } else {
-    // === CREATE ===
     DB.counter.beban++;
     const bebanNo = 'BBN' + String(DB.counter.beban).padStart(4,'0');
     postJurnal(tgl, `Beban ${akun.nama} - ${keterangan}`, [
@@ -1341,14 +1626,33 @@ function deleteBeban(bebanNo) {
 }
 
 /* =========================================================
-   ASET TETAP (CRUD)
+   ASET TETAP
    ========================================================= */
 let editingAset = null;
 function openModalAset(asetNo = null) {
   if (DB.isClosed) return alert('🔒 Periode tertutup.');
+  // Kategori dari master
+  const aktifKategori = DB.kategoriAset.filter(ka => ka.status === 'AKTIF');
+  document.getElementById('asetKategori').innerHTML = aktifKategori.length > 0
+    ? aktifKategori.map(ka => `<option value="${ka.kode}" data-umur="${ka.umur}">${ka.kode} - ${ka.nama}</option>`).join('')
+    : '<option value="">-- Belum ada kategori aktif, tambah dulu di Master Kategori Aset --</option>';
+  document.getElementById('asetUmur').innerHTML = `
+    <option value="4">4 tahun</option>
+    <option value="5">5 tahun</option>
+    <option value="8">8 tahun</option>
+    <option value="20">20 tahun</option>
+  `;
   ['asetHarga','asetUmur','asetKategori'].forEach(id => {
     document.getElementById(id).oninput = updateAsetPreview;
-    document.getElementById(id).onchange = updateAsetPreview;
+    document.getElementById(id).onchange = () => {
+      if (id === 'asetKategori') {
+        const sel = document.getElementById('asetKategori');
+        const opt = sel.options[sel.selectedIndex];
+        const umur = opt.getAttribute('data-umur');
+        if (umur) document.getElementById('asetUmur').value = umur;
+      }
+      updateAsetPreview();
+    };
   });
   if (asetNo) {
     const a = DB.aset.find(x => x.no === asetNo);
@@ -1369,7 +1673,8 @@ function openModalAset(asetNo = null) {
     document.getElementById('asetNama').value = '';
     document.getElementById('asetHarga').value = '';
     document.getElementById('asetKeterangan').value = '';
-    document.getElementById('asetUmur').value = '4';
+    // Set default umur dari kategori pertama
+    if (aktifKategori.length > 0) document.getElementById('asetUmur').value = aktifKategori[0].umur;
     document.getElementById('asetPreview').classList.add('hidden');
   }
   updateAsetPreview();
@@ -1387,14 +1692,10 @@ function updateAsetPreview() {
   `;
   document.getElementById('asetPreview').classList.remove('hidden');
 }
-function getAkunAset(kategori) {
-  const mapping = {
-    '121':  { aset: '121',  akum: '122',  asetNama: 'Peralatan', akumNama: 'Akumulasi Penyusutan Peralatan' },
-    '121A': { aset: '121A', akum: '122A', asetNama: 'Komputer & Laptop', akumNama: 'Akum. Penyusutan Komputer & Laptop' },
-    '121B': { aset: '121B', akum: '122B', asetNama: 'Kendaraan', akumNama: 'Akum. Penyusutan Kendaraan' },
-    '121C': { aset: '121C', akum: '122C', asetNama: 'Furnitur', akumNama: 'Akum. Penyusutan Furnitur' },
-  };
-  return mapping[kategori] || mapping['121'];
+function getAkunAset(kategoriKode) {
+  const ka = DB.kategoriAset.find(k => k.kode === kategoriKode);
+  if (!ka) return null;
+  return { aset: ka.akunAset, akum: ka.akunAkum, asetNama: ka.nama, akumNama: `Akum. Penyusutan ${ka.nama}` };
 }
 function saveAset() {
   if (DB.isClosed) return alert('🔒 Periode tertutup.');
@@ -1404,13 +1705,13 @@ function saveAset() {
   const harga = parseFloat(document.getElementById('asetHarga').value) || 0;
   const umur = parseInt(document.getElementById('asetUmur').value) || 4;
   const keterangan = document.getElementById('asetKeterangan').value.trim();
+  if (!kategori) return alert('Pilih kategori aset. Jika belum ada, tambah di Master Kategori Aset.');
   if (!nama) return alert('Nama wajib');
   if (harga <= 0) return alert('Harga harus > 0');
   const akun = getAkunAset(kategori);
+  if (!akun) return alert('Kategori aset tidak valid.');
   const penyusutanBulanan = harga / (umur * 12);
-
   if (editingAset) {
-    // === EDIT ===
     const a = DB.aset.find(x => x.no === editingAset);
     const oldData = `${a.nama}, Harga: ${fmt(a.harga)}`;
     const jurnalLama = DB.jurnal.filter(j => j.keterangan.includes(`Perolehan Aset ${a.no}`));
@@ -1451,9 +1752,7 @@ function deleteAset(asetNo) {
   if (DB.isClosed) return alert('🔒 Periode tertutup.');
   const aset = DB.aset.find(a => a.no === asetNo);
   if (!aset) return;
-  if (aset.totalPenyusutan > 0) {
-    return alert(`⚠️ Aset ini sudah disusutkan ${fmt(aset.totalPenyusutan)}.\n\nTidak bisa dihapus langsung. Buat jurnal koreksi jika perlu.`);
-  }
+  if (aset.totalPenyusutan > 0) return alert(`⚠️ Aset ini sudah disusutkan ${fmt(aset.totalPenyusutan)}.\n\nTidak bisa dihapus langsung.`);
   showConfirm('🗑 Hapus Aset?', `Hapus <strong>${aset.no} - ${aset.nama}</strong>?<br>Harga: ${fmt(aset.harga)}<br><br><span class="text-red-600">Jurnal perolehan akan dihapus.</span>`, 'Ya, Hapus', () => {
     const jurnalToRemove = DB.jurnal.filter(j => j.keterangan.includes(`Perolehan Aset ${aset.no}`));
     jurnalToRemove.forEach(j => { DB.saldo[j.akun] = (DB.saldo[j.akun] || 0) - (j.debit - j.kredit); });
@@ -1465,13 +1764,15 @@ function deleteAset(asetNo) {
   });
 }
 
-/* PENYUSUTAN */
+/* =========================================================
+   PENYUSUTAN
+   ========================================================= */
 function prosesPenyusutan() {
   if (DB.isClosed) return alert('🔒 Periode tertutup.');
   const bulanIni = currentMonth();
   if (DB.aset.length === 0) return alert('Belum ada aset.');
   const sudahProses = DB.penyusutanLog.some(p => p.periode === bulanIni);
-  if (sudahProses) return alert(`⚠️ Penyusutan bulan ${periodLabel(bulanIni)} sudah diproses.\n\nTidak bisa dijalankan ulang.`);
+  if (sudahProses) return alert(`⚠️ Penyusutan bulan ${periodLabel(bulanIni)} sudah diproses.`);
   const asetPerluSusut = DB.aset.filter(a => {
     if (a.totalPenyusutan >= a.harga - 1) return false;
     if (bulanIni < a.tanggal.slice(0, 7)) return false;
@@ -1833,7 +2134,7 @@ function doUnlock() {
 }
 
 /* =========================================================
-   PERIOD DROPDOWN HELPERS
+   PERIOD DROPDOWN
    ========================================================= */
 function fillPeriodDropdowns() {
   const periods = listAvailablePeriods();
@@ -1845,7 +2146,6 @@ function fillPeriodDropdowns() {
     sel.innerHTML = periods.map(p => `<option value="${p}" ${p === curMonth ? 'selected' : ''}>${periodLabel(p)}</option>`).join('');
     if (prevVal && periods.includes(prevVal)) sel.value = prevVal;
   });
-  // Dropdown akun untuk buku besar
   const bbAkun = document.getElementById('bbAkun');
   if (bbAkun) {
     const prev = bbAkun.value;
@@ -1861,6 +2161,7 @@ function renderAll() {
   fillPeriodDropdowns();
   renderPeriodBadge(); renderDashboard();
   renderCustomer(); renderSupplier(); renderProduk(); renderCOA();
+  renderJenisBeban(); renderKategoriAset();
   renderSO(); renderInvoice();
   renderBeban(); renderAset();
   renderJurnal(); renderBukuBesar(); renderTrial();
@@ -1932,7 +2233,57 @@ function renderProduk() {
   }).join('') || '<tr><td colspan="5" class="text-center p-4 text-slate-400">Belum ada data</td></tr>';
 }
 function renderCOA() {
-  document.querySelector('#tblCOA tbody').innerHTML = DB.coa.map(c => `<tr class="border-b"><td class="p-2 font-mono text-xs">${c.kode}</td><td class="p-2">${c.nama}</td><td class="p-2 text-xs">${c.tipe}</td><td class="p-2">${c.normal === 'D' ? 'Debit' : 'Kredit'}</td></tr>`).join('');
+  document.querySelector('#tblCOA tbody').innerHTML = DB.coa.map(c => {
+    const isBeban = c.tipe === 'Beban Operasional' || c.tipe === 'Beban Lain';
+    const isAset = c.tipe === 'Aset Tetap';
+    const jb = DB.jenisBeban.find(x => x.kode === c.kode);
+    const ka = DB.kategoriAset.find(x => x.akunAset === c.kode || x.akunAkum === c.kode);
+    let sumber = '-';
+    if (jb) sumber = 'Jenis Beban';
+    else if (ka) sumber = 'Kategori Aset';
+    return `<tr class="border-b">
+      <td class="p-2 font-mono text-xs">${c.kode}</td>
+      <td class="p-2">${c.nama}</td>
+      <td class="p-2 text-xs">${c.tipe}</td>
+      <td class="p-2">${c.normal === 'D' ? 'Debit' : 'Kredit'}</td>
+      <td class="p-2 text-center"><span class="badge ${sumber !== '-' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}">${sumber}</span></td>
+      <td class="p-2 text-center"><button onclick="openEditCOA('${c.kode}')" class="icon-btn bg-blue-600 text-white">✏ Edit</button></td>
+    </tr>`;
+  }).join('');
+}
+function renderJenisBeban() {
+  document.querySelector('#tblJenisBeban tbody').innerHTML = DB.jenisBeban.map(jb => `
+    <tr class="border-b">
+      <td class="p-2 font-mono text-xs">${jb.kode}</td>
+      <td class="p-2 font-semibold">${jb.nama}</td>
+      <td class="p-2 text-xs text-slate-500">${jb.keterangan || '-'}</td>
+      <td class="p-2 text-center"><span class="badge ${jb.status === 'AKTIF' ? 'badge-aktif' : 'badge-nonaktif'}">${jb.status}</span></td>
+      <td class="p-2 text-center">
+        <div class="flex gap-1 justify-center">
+          <button onclick="openModalJenisBeban('${jb.kode}')" class="icon-btn bg-blue-600 text-white">✏ Edit</button>
+          <button onclick="toggleJenisBebanStatus('${jb.kode}')" class="icon-btn ${jb.status === 'AKTIF' ? 'bg-orange-600' : 'bg-green-600'} text-white">${jb.status === 'AKTIF' ? '🚫 Nonaktifkan' : '✓ Aktifkan'}</button>
+        </div>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="text-center p-4 text-slate-400">Belum ada jenis beban</td></tr>';
+}
+function renderKategoriAset() {
+  document.querySelector('#tblKategoriAset tbody').innerHTML = DB.kategoriAset.map(ka => `
+    <tr class="border-b">
+      <td class="p-2 font-mono text-xs">${ka.kode}</td>
+      <td class="p-2 font-semibold">${ka.nama}</td>
+      <td class="p-2 font-mono text-xs">${ka.akunAset}</td>
+      <td class="p-2 font-mono text-xs">${ka.akunAkum}</td>
+      <td class="p-2 text-center">${ka.umur} th</td>
+      <td class="p-2 text-center"><span class="badge ${ka.status === 'AKTIF' ? 'badge-aktif' : 'badge-nonaktif'}">${ka.status}</span></td>
+      <td class="p-2 text-center">
+        <div class="flex gap-1 justify-center">
+          <button onclick="openModalKategoriAset('${ka.kode}')" class="icon-btn bg-blue-600 text-white">✏ Edit</button>
+          <button onclick="toggleKategoriAsetStatus('${ka.kode}')" class="icon-btn ${ka.status === 'AKTIF' ? 'bg-orange-600' : 'bg-green-600'} text-white">${ka.status === 'AKTIF' ? '🚫 Nonaktifkan' : '✓ Aktifkan'}</button>
+        </div>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" class="text-center p-4 text-slate-400">Belum ada kategori aset</td></tr>';
 }
 function renderSO() {
   document.querySelector('#tblSO tbody').innerHTML = DB.so.map(s => `
@@ -2052,21 +2403,18 @@ function renderAset() {
         <td class="p-2 text-center">
           <div class="flex gap-1 justify-center">
             ${!sudahDisusutkan ? `<button onclick="openModalAset('${a.no}')" class="icon-btn bg-blue-600 text-white">✏ Edit</button>` : ''}
-            <button onclick="deleteAset('${a.no}')" class="icon-btn bg-red-600 text-white" ${sudahDisusutkan ? 'title="Sudah disusutkan, tidak bisa dihapus"' : ''}>🗑 Hapus</button>
+            <button onclick="deleteAset('${a.no}')" class="icon-btn bg-red-600 text-white" ${sudahDisusutkan ? 'title="Sudah disusutkan"' : ''}>🗑 Hapus</button>
           </div>
         </td>
       </tr>
     `;
   }).join('') || '<tr><td colspan="9" class="text-center p-4 text-slate-400">Belum ada aset</td></tr>';
 }
-
-/* JURNAL dengan filter periode */
 function renderJurnal() {
   const periode = document.getElementById('jurnalPeriode')?.value || currentMonth();
   const dari = document.getElementById('jurnalDari')?.value;
   const sampai = document.getElementById('jurnalSampai')?.value;
-  let jurnalList;
-  let infoText;
+  let jurnalList, infoText;
   if (dari && sampai) {
     jurnalList = DB.jurnal.filter(j => j.tanggal >= dari && j.tanggal <= sampai);
     infoText = `Custom: ${dari} s/d ${sampai}`;
@@ -2080,7 +2428,7 @@ function renderJurnal() {
   document.querySelector('#tblJurnal tbody').innerHTML = jurnalList.slice().reverse().map(j => {
     tD += j.debit; tK += j.kredit;
     return `<tr class="border-b text-xs"><td class="p-2">${j.tanggal}</td><td class="p-2 font-mono">${j.no}</td><td class="p-2">${j.keterangan}</td><td class="p-2">${j.akun} - ${j.akunNama}</td><td class="p-2 text-right">${j.debit ? fmt(j.debit) : '-'}</td><td class="p-2 text-right">${j.kredit ? fmt(j.kredit) : '-'}</td></tr>`;
-  }).join('') || '<tr><td colspan="6" class="text-center p-4 text-slate-400">Tidak ada jurnal di periode ini</td></tr>';
+  }).join('') || '<tr><td colspan="6" class="text-center p-4 text-slate-400">Tidak ada jurnal</td></tr>';
   document.getElementById('jurnalTotalD').textContent = fmt(tD);
   document.getElementById('jurnalTotalK').textContent = fmt(tK);
 }
@@ -2099,22 +2447,14 @@ function renderBukuBesar() {
   document.getElementById('bukuBesarContainer').innerHTML = Object.keys(grouped).sort().map(kode => {
     const g = grouped[kode];
     let saldo = 0;
-    const rows = g.items.map(i => {
-      saldo += i.debit - i.kredit;
-      return `<tr class="border-b text-xs"><td class="p-1">${i.tanggal}</td><td class="p-1">${i.keterangan}</td><td class="p-1 text-right">${i.debit ? fmt(i.debit) : '-'}</td><td class="p-1 text-right">${i.kredit ? fmt(i.kredit) : '-'}</td><td class="p-1 text-right font-semibold">${fmt(saldo)}</td></tr>`;
-    }).join('');
+    const rows = g.items.map(i => { saldo += i.debit - i.kredit; return `<tr class="border-b text-xs"><td class="p-1">${i.tanggal}</td><td class="p-1">${i.keterangan}</td><td class="p-1 text-right">${i.debit ? fmt(i.debit) : '-'}</td><td class="p-1 text-right">${i.kredit ? fmt(i.kredit) : '-'}</td><td class="p-1 text-right font-semibold">${fmt(saldo)}</td></tr>`; }).join('');
     const totalD = g.items.reduce((s, i) => s + i.debit, 0);
     const totalK = g.items.reduce((s, i) => s + i.kredit, 0);
-    return `<div class="mb-4 border rounded overflow-hidden">
-      <div class="bg-slate-100 p-2 font-semibold text-sm">${kode} - ${g.nama}</div>
-      <table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs"><tr><th class="text-left p-1">Tgl</th><th class="text-left p-1">Ket</th><th class="text-right p-1">Debit</th><th class="text-right p-1">Kredit</th><th class="text-right p-1">Saldo</th></tr></thead><tbody>${rows}</tbody>
-      <tfoot class="bg-slate-50 text-xs font-semibold"><tr><td colspan="2" class="text-right p-1">TOTAL</td><td class="text-right p-1">${fmt(totalD)}</td><td class="text-right p-1">${fmt(totalK)}</td><td class="text-right p-1">${fmt(totalD - totalK)}</td></tr></tfoot></table></div>`;
-  }).join('') || '<p class="text-center text-slate-400 py-4">Tidak ada jurnal di periode ini</p>';
+    return `<div class="mb-4 border rounded overflow-hidden"><div class="bg-slate-100 p-2 font-semibold text-sm">${kode} - ${g.nama}</div><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs"><tr><th class="text-left p-1">Tgl</th><th class="text-left p-1">Ket</th><th class="text-right p-1">Debit</th><th class="text-right p-1">Kredit</th><th class="text-right p-1">Saldo</th></tr></thead><tbody>${rows}</tbody><tfoot class="bg-slate-50 text-xs font-semibold"><tr><td colspan="2" class="text-right p-1">TOTAL</td><td class="text-right p-1">${fmt(totalD)}</td><td class="text-right p-1">${fmt(totalK)}</td><td class="text-right p-1">${fmt(totalD - totalK)}</td></tr></tfoot></table></div>`;
+  }).join('') || '<p class="text-center text-slate-400 py-4">Tidak ada jurnal</p>';
 }
 function renderTrial() {
   const periode = document.getElementById('tbPeriode')?.value || currentMonth();
-  const range = getPeriodRange(periode);
-  // Saldo sampai akhir periode
   const saldo = getSaldoPeriode(periode);
   document.getElementById('tbInfo').textContent = `Saldo per akhir: ${periodLabel(periode)}`;
   const rows = [];
@@ -2127,7 +2467,7 @@ function renderTrial() {
     tD += debit; tK += kredit;
     rows.push(`<tr class="border-b"><td class="p-2 font-mono text-xs">${c.kode}</td><td class="p-2">${c.nama}</td><td class="p-2 text-right">${debit ? fmt(debit) : '-'}</td><td class="p-2 text-right">${kredit ? fmt(kredit) : '-'}</td></tr>`);
   });
-  document.querySelector('#tblTrial tbody').innerHTML = rows.join('') || '<tr><td colspan="4" class="text-center p-4 text-slate-400">Tidak ada saldo di periode ini</td></tr>';
+  document.querySelector('#tblTrial tbody').innerHTML = rows.join('') || '<tr><td colspan="4" class="text-center p-4 text-slate-400">Tidak ada saldo</td></tr>';
   document.getElementById('totalDebit').textContent = fmt(tD);
   document.getElementById('totalKredit').textContent = fmt(tK);
 }
@@ -2168,18 +2508,16 @@ function getNeracaData(periode = null) {
   const piutang = saldo['102'] || 0;
   const ppnMasukan = saldo['104'] || 0;
   const asetList = [];
-  ['121','121A','121B','121C'].forEach(kode => {
-    const s = saldo[kode] || 0;
+  DB.coa.filter(c => c.tipe === 'Aset Tetap' && c.normal === 'D').forEach(c => {
+    const s = saldo[c.kode] || 0;
     if (Math.abs(s) < 0.5) return;
-    const coa = DB.coa.find(c => c.kode === kode);
-    asetList.push({ nama: coa.nama, nilai: s });
+    asetList.push({ nama: c.nama, nilai: s });
   });
   const kontraList = [];
-  ['122','122A','122B','122C'].forEach(kode => {
-    const s = -(saldo[kode] || 0);
+  DB.coa.filter(c => c.tipe === 'Aset Tetap' && c.normal === 'K').forEach(c => {
+    const s = -(saldo[c.kode] || 0);
     if (Math.abs(s) < 0.5) return;
-    const coa = DB.coa.find(c => c.kode === kode);
-    kontraList.push({ nama: coa.nama, nilai: -s });
+    kontraList.push({ nama: c.nama, nilai: -s });
   });
   const totalAsetLancar = kas + piutang + ppnMasukan;
   const totalAsetTetap = asetList.reduce((s,a) => s + a.nilai, 0);
@@ -2189,28 +2527,14 @@ function getNeracaData(periode = null) {
   const ppnKel = -(saldo['202'] || 0);
   const modal = -(saldo['301'] || 0);
   const labaDitahan = -(saldo['303'] || 0);
-  // Laba berjalan = pendapatan - hpp - beban dari saldo periode ini
   const labaBerjalan = getLabaRugiData(saldo).labaBersih;
   const totalKewajiban = hutang + ppnKel;
   const totalEkuitas = modal + labaDitahan + labaBerjalan;
   const totalPasiva = totalKewajiban + totalEkuitas;
   return {
-    aset: [
-      { nama: 'Kas / Bank', nilai: kas },
-      { nama: 'Piutang Dagang', nilai: piutang },
-      { nama: 'PPN Masukan', nilai: ppnMasukan },
-      ...asetList,
-      ...kontraList,
-    ],
-    kewajiban: [
-      { nama: 'Hutang Dagang', nilai: hutang },
-      { nama: 'PPN Keluaran', nilai: ppnKel },
-    ],
-    ekuitas: [
-      { nama: 'Modal Disetor', nilai: modal },
-      { nama: 'Laba Ditahan', nilai: labaDitahan },
-      { nama: 'Laba Tahun Berjalan', nilai: labaBerjalan },
-    ],
+    aset: [{ nama: 'Kas / Bank', nilai: kas }, { nama: 'Piutang Dagang', nilai: piutang }, { nama: 'PPN Masukan', nilai: ppnMasukan }, ...asetList, ...kontraList],
+    kewajiban: [{ nama: 'Hutang Dagang', nilai: hutang }, { nama: 'PPN Keluaran', nilai: ppnKel }],
+    ekuitas: [{ nama: 'Modal Disetor', nilai: modal }, { nama: 'Laba Ditahan', nilai: labaDitahan }, { nama: 'Laba Tahun Berjalan', nilai: labaBerjalan }],
     totalAset, totalKewajiban, totalEkuitas, totalPasiva,
   };
 }
@@ -2220,13 +2544,8 @@ function renderNeraca() {
   document.getElementById('neracaInfo').textContent = `Posisi per akhir: ${periodLabel(periode)}`;
   document.getElementById('neracaTgl').textContent = `Per: ${range.sampai}`;
   const d = getNeracaData(periode);
-  document.querySelector('#tblAsetNeraca tbody').innerHTML =
-    d.aset.map(a => `<tr class="border-b"><td class="p-2">${a.nama}</td><td class="p-2 text-right">${fmt(a.nilai)}</td></tr>`).join('') +
-    `<tr class="bg-slate-50 font-bold"><td class="p-2">Total Aset</td><td class="p-2 text-right">${fmt(d.totalAset)}</td></tr>`;
-  document.querySelector('#tblKewajiban tbody').innerHTML =
-    d.kewajiban.map(k => `<tr class="border-b"><td class="p-2">${k.nama}</td><td class="p-2 text-right">${fmt(k.nilai)}</td></tr>`).join('') +
-    d.ekuitas.map(e => `<tr class="border-b"><td class="p-2">${e.nama}</td><td class="p-2 text-right">${fmt(e.nilai)}</td></tr>`).join('') +
-    `<tr class="bg-slate-50 font-bold"><td class="p-2">Total Kewajiban + Ekuitas</td><td class="p-2 text-right">${fmt(d.totalPasiva)}</td></tr>`;
+  document.querySelector('#tblAsetNeraca tbody').innerHTML = d.aset.map(a => `<tr class="border-b"><td class="p-2">${a.nama}</td><td class="p-2 text-right">${fmt(a.nilai)}</td></tr>`).join('') + `<tr class="bg-slate-50 font-bold"><td class="p-2">Total Aset</td><td class="p-2 text-right">${fmt(d.totalAset)}</td></tr>`;
+  document.querySelector('#tblKewajiban tbody').innerHTML = d.kewajiban.map(k => `<tr class="border-b"><td class="p-2">${k.nama}</td><td class="p-2 text-right">${fmt(k.nilai)}</td></tr>`).join('') + d.ekuitas.map(e => `<tr class="border-b"><td class="p-2">${e.nama}</td><td class="p-2 text-right">${fmt(e.nilai)}</td></tr>`).join('') + `<tr class="bg-slate-50 font-bold"><td class="p-2">Total Kewajiban + Ekuitas</td><td class="p-2 text-right">${fmt(d.totalPasiva)}</td></tr>`;
   document.getElementById('neracaTotalAset').textContent = fmt(d.totalAset);
   document.getElementById('neracaTotalPasiva').textContent = fmt(d.totalPasiva);
   const diff = Math.abs(d.totalAset - d.totalPasiva);
@@ -2239,29 +2558,18 @@ function renderArusKas() {
   const range = getPeriodRange(periode);
   document.getElementById('akInfo').textContent = `Periode: ${periodLabel(periode)}`;
   document.getElementById('akPeriodeLabel').textContent = `Periode: ${periodLabel(periode)}`;
-  // Ambil jurnal dalam periode
   const jurnalPeriode = DB.jurnal.filter(j => j.tanggal >= range.dari && j.tanggal <= range.sampai);
-  // Kas masuk: jurnal yang debit ke 101 (kas)
-  let kasMasukOperasi = 0;
-  let kasKeluarOperasi = 0;
-  let kasKeluarInvestasi = 0;
+  let kasMasukOperasi = 0, kasKeluarOperasi = 0, kasKeluarInvestasi = 0;
   jurnalPeriode.forEach(j => {
     if (j.akun === '101' && j.debit > 0) {
-      // Cari jurnal pasangan (dalam grup no yang sama)
       const group = DB.jurnal.filter(x => x.no === j.no);
-      const adaPenjualan = group.some(x => x.akun === '401');
-      if (adaPenjualan) kasMasukOperasi += j.debit;
+      if (group.some(x => x.akun === '401')) kasMasukOperasi += j.debit;
     }
     if (j.akun === '101' && j.kredit > 0) {
       const group = DB.jurnal.filter(x => x.no === j.no);
-      const adaHPP = group.some(x => x.akun === '501');
-      const adaBeban = group.some(x => ['601','602','603','604','605','606','607','608','701'].includes(x.akun));
-      const adaAset = group.some(x => ['121','121A','121B','121C'].includes(x.akun));
-      const adaModal = group.some(x => x.akun === '301');
-      if (adaHPP) kasKeluarOperasi += j.kredit;
-      if (adaBeban) kasKeluarOperasi += j.kredit;
-      if (adaAset) kasKeluarInvestasi += j.kredit;
-      if (adaModal) { /* modal awal, bukan operasi */ }
+      if (group.some(x => x.akun === '501')) kasKeluarOperasi += j.kredit;
+      if (group.some(x => DB.coa.find(c => c.kode === x.akun)?.tipe === 'Beban Operasional')) kasKeluarOperasi += j.kredit;
+      if (group.some(x => DB.coa.find(c => c.kode === x.akun)?.tipe === 'Aset Tetap' && DB.coa.find(c => c.kode === x.akun)?.normal === 'D')) kasKeluarInvestasi += j.kredit;
     }
   });
   const nettoOperasi = kasMasukOperasi - kasKeluarOperasi;
@@ -2271,7 +2579,7 @@ function renderArusKas() {
   document.querySelector('#tblArusKas tbody').innerHTML = `
     <tr class="bg-slate-100 font-semibold"><td class="p-2" colspan="2">AKTIVITAS OPERASI</td></tr>
     <tr class="border-b"><td class="p-2 pl-6">Penerimaan dari Penjualan</td><td class="p-2 text-right">${fmt(kasMasukOperasi)}</td></tr>
-    <tr class="border-b"><td class="p-2 pl-6">Pembayaran Pembelian (HPP)</td><td class="p-2 text-right text-red-600">(${fmt(kasKeluarOperasi)})</td></tr>
+    <tr class="border-b"><td class="p-2 pl-6">Pembayaran Pembelian & Beban</td><td class="p-2 text-right text-red-600">(${fmt(kasKeluarOperasi)})</td></tr>
     <tr class="border-b bg-slate-50 font-semibold"><td class="p-2">Neto Operasi</td><td class="p-2 text-right">${fmt(nettoOperasi)}</td></tr>
     <tr class="bg-slate-100 font-semibold"><td class="p-2" colspan="2">AKTIVITAS INVESTASI</td></tr>
     <tr class="border-b"><td class="p-2 pl-6">Pembelian Aset Tetap</td><td class="p-2 text-right text-red-600">(${fmt(kasKeluarInvestasi)})</td></tr>
@@ -2335,6 +2643,7 @@ function renderAuditLog() {
       'BEBAN DIBUAT': 'bg-pink-100 text-pink-700', 'BEBAN DIUBAH': 'bg-yellow-100 text-yellow-700', 'BEBAN DIHAPUS': 'bg-red-100 text-red-700',
       'ASET DIBUAT': 'bg-teal-100 text-teal-700', 'ASET DIUBAH': 'bg-yellow-100 text-yellow-700', 'ASET DIHAPUS': 'bg-red-100 text-red-700',
       'PENYUSUTAN': 'bg-purple-100 text-purple-700',
+      'JENIS BEBAN': 'bg-pink-100 text-pink-700', 'KATEGORI ASET': 'bg-teal-100 text-teal-700', 'COA DIUBAH': 'bg-amber-100 text-amber-700',
     };
     return `<tr class="border-b text-xs"><td class="p-2 font-mono whitespace-nowrap">${a.waktu}</td><td class="p-2"><span class="badge ${colorMap[a.aksi] || 'bg-slate-100'}">${a.aksi}</span></td><td class="p-2">${a.user}</td><td class="p-2">${a.detail}</td><td class="p-2 text-xs text-slate-500">${a.sebelum}</td><td class="p-2 text-xs text-slate-700">${a.sesudah}</td></tr>`;
   }).join('') || '<tr><td colspan="6" class="text-center p-4 text-slate-400">Belum ada aktivitas</td></tr>';
@@ -2363,16 +2672,8 @@ function renderLapPenjualan() {
   lines.forEach(l => { perCust[l.customer] = (perCust[l.customer] || 0) + l.subtotalJual; });
   document.querySelector('#tblLapJualCust tbody').innerHTML = Object.keys(perCust).map(k => `<tr class="border-b"><td class="p-2">${k}</td><td class="p-2 text-right">${fmt(perCust[k])}</td></tr>`).join('') || '<tr><td colspan="2" class="text-center p-3 text-slate-400">Tidak ada data</td></tr>';
   const perProd = {};
-  lines.forEach(l => {
-    if (!perProd[l.produkNama]) perProd[l.produkNama] = { qty: 0, total: 0, hpp: 0 };
-    perProd[l.produkNama].qty += l.qty;
-    perProd[l.produkNama].total += l.subtotalJual;
-    perProd[l.produkNama].hpp += l.subtotalBeli;
-  });
-  document.querySelector('#tblLapJualProd tbody').innerHTML = Object.keys(perProd).map(k => {
-    const d = perProd[k];
-    return `<tr class="border-b"><td class="p-2">${k}</td><td class="p-2 text-right">${fmtNum(d.qty)}</td><td class="p-2 text-right">${fmt(d.total)}</td><td class="p-2 text-right">${fmt(d.hpp)}</td><td class="p-2 text-right font-semibold text-green-600">${fmt(d.total - d.hpp)}</td></tr>`;
-  }).join('') || '<tr><td colspan="5" class="text-center p-3 text-slate-400">Tidak ada data</td></tr>';
+  lines.forEach(l => { if (!perProd[l.produkNama]) perProd[l.produkNama] = { qty: 0, total: 0, hpp: 0 }; perProd[l.produkNama].qty += l.qty; perProd[l.produkNama].total += l.subtotalJual; perProd[l.produkNama].hpp += l.subtotalBeli; });
+  document.querySelector('#tblLapJualProd tbody').innerHTML = Object.keys(perProd).map(k => { const d = perProd[k]; return `<tr class="border-b"><td class="p-2">${k}</td><td class="p-2 text-right">${fmtNum(d.qty)}</td><td class="p-2 text-right">${fmt(d.total)}</td><td class="p-2 text-right">${fmt(d.hpp)}</td><td class="p-2 text-right font-semibold text-green-600">${fmt(d.total - d.hpp)}</td></tr>`; }).join('') || '<tr><td colspan="5" class="text-center p-3 text-slate-400">Tidak ada data</td></tr>';
   document.querySelector('#tblLapJualDetail tbody').innerHTML = lines.map(l => `<tr class="border-b text-xs"><td class="p-2">${l.tgl}</td><td class="p-2 font-mono">${l.invNo}</td><td class="p-2">${l.customer}</td><td class="p-2 text-xs">${l.supplier}</td><td class="p-2">${l.produkNama}</td><td class="p-2 text-right">${l.qty}</td><td class="p-2 text-right">${fmt(l.hargaJual)}</td><td class="p-2 text-right">${fmt(l.hargaBeli)}</td><td class="p-2 text-right font-semibold text-green-600">${fmt(l.laba)}</td></tr>`).join('') || '<tr><td colspan="9" class="text-center p-3 text-slate-400">Tidak ada data</td></tr>';
 }
 function resetData() { if (!confirm('Reset semua data demo?')) return; location.reload(); }
@@ -2381,6 +2682,49 @@ function resetData() { if (!confirm('Reset semua data demo?')) return; location.
    SEED
    ========================================================= */
 function seed() {
+  // COA awal
+  DB.coa = [
+    { kode: '101', nama: 'Kas / Bank', tipe: 'Aset Lancar', normal: 'D' },
+    { kode: '102', nama: 'Piutang Dagang', tipe: 'Aset Lancar', normal: 'D' },
+    { kode: '104', nama: 'PPN Masukan', tipe: 'Aset Lancar', normal: 'D' },
+    { kode: '201', nama: 'Hutang Dagang', tipe: 'Kewajiban Lancar', normal: 'K' },
+    { kode: '202', nama: 'PPN Keluaran', tipe: 'Kewajiban Lancar', normal: 'K' },
+    { kode: '301', nama: 'Modal Disetor', tipe: 'Ekuitas', normal: 'K' },
+    { kode: '303', nama: 'Laba Ditahan', tipe: 'Ekuitas', normal: 'K' },
+    { kode: '401', nama: 'Penjualan', tipe: 'Pendapatan', normal: 'K' },
+    { kode: '501', nama: 'Harga Pokok Penjualan (HPP)', tipe: 'HPP', normal: 'D' },
+    { kode: '606', nama: 'Beban Penyusutan', tipe: 'Beban Operasional', normal: 'D' },
+  ];
+
+  // Master Jenis Beban awal
+  DB.jenisBeban = [
+    { kode: '601', nama: 'Beban Gaji & Tunjangan', keterangan: 'Gaji, tunjangan, bonus karyawan', status: 'AKTIF' },
+    { kode: '602', nama: 'Beban Sewa', keterangan: 'Sewa kantor, gudang', status: 'AKTIF' },
+    { kode: '603', nama: 'Beban Listrik, Air & Telepon', keterangan: 'Utilitas kantor', status: 'AKTIF' },
+    { kode: '604', nama: 'Beban Transportasi', keterangan: 'Bensin, tol, ojek online', status: 'AKTIF' },
+    { kode: '605', nama: 'Beban Perlengkapan', keterangan: 'ATK, perlengkapan kantor', status: 'AKTIF' },
+    { kode: '607', nama: 'Beban Administrasi & Umum', keterangan: 'Beban admin lain-lain', status: 'AKTIF' },
+    { kode: '608', nama: 'Beban Pajak & Perizinan', keterangan: 'PBB, izin usaha', status: 'AKTIF' },
+  ];
+  DB.jenisBeban.forEach(jb => {
+    if (!DB.coa.some(c => c.kode === jb.kode)) {
+      DB.coa.push({ kode: jb.kode, nama: jb.nama, tipe: 'Beban Operasional', normal: 'D' });
+    }
+  });
+
+  // Master Kategori Aset awal
+  DB.kategoriAset = [
+    { kode: '121', nama: 'Peralatan', akunAset: '121', akunAkum: '122', umur: 5, keterangan: 'Peralatan kantor umum', status: 'AKTIF' },
+    { kode: '121A', nama: 'Komputer & Laptop', akunAset: '121A', akunAkum: '122A', umur: 4, keterangan: 'Komputer, laptop, printer', status: 'AKTIF' },
+    { kode: '121B', nama: 'Kendaraan', akunAset: '121B', akunAkum: '122B', umur: 8, keterangan: 'Mobil, motor operasional', status: 'AKTIF' },
+    { kode: '121C', nama: 'Furnitur', akunAset: '121C', akunAkum: '122C', umur: 5, keterangan: 'Meja, kursi, lemari', status: 'AKTIF' },
+  ];
+  DB.kategoriAset.forEach(ka => {
+    if (!DB.coa.some(c => c.kode === ka.akunAset)) DB.coa.push({ kode: ka.akunAset, nama: ka.nama, tipe: 'Aset Tetap', normal: 'D' });
+    if (!DB.coa.some(c => c.kode === ka.akunAkum)) DB.coa.push({ kode: ka.akunAkum, nama: `Akum. Penyusutan ${ka.nama}`, tipe: 'Aset Tetap', normal: 'K' });
+  });
+
+  // Data master
   DB.suppliers = [
     { kode: 'S001', nama: 'PT Sumber Makmur', alamat: 'Jl. Industri Raya No. 45, Jakarta Utara', npwp: '01.111.222.3-401.000', status: 'PKP' },
     { kode: 'S002', nama: 'CV Aneka Supply', alamat: 'Jl. Pasar Baru No. 12, Bandung', npwp: '02.222.333.4-402.000', status: 'PKP' },
@@ -2437,6 +2781,7 @@ function seed() {
     { produkKode: 'P006', qty: 30, hargaBeli: 18000, hargaJual: 24000 },
   ]);
 
+  // Beban dummy
   DB.counter.beban++;
   DB.beban.push({ no: 'BBN0001', tanggal: '2026-10-20', akunKode: '601', akunNama: 'Beban Gaji & Tunjangan', keterangan: 'Gaji 5 karyawan Oktober 2026', jumlah: 8500000 });
   postJurnal('2026-10-20', `Beban Beban Gaji & Tunjangan - Gaji 5 karyawan Oktober 2026`, [
@@ -2456,20 +2801,23 @@ function seed() {
     { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: 800000 },
   ]);
 
+  // Aset dummy
   const aset1Harga = 15000000, aset1Umur = 4;
   const aset1Penyusutan = aset1Harga / (aset1Umur * 12);
+  const ka1 = DB.kategoriAset.find(k => k.kode === '121A');
   DB.counter.aset++;
-  DB.aset.push({ no: 'AST0001', tanggal: '2026-10-05', kategori: '121A', nama: 'Laptop Dell Latitude 15 inch', harga: aset1Harga, umur: aset1Umur, penyusutanBulanan: aset1Penyusutan, akumulasi: 0, keterangan: 'Untuk staf accounting', akunAset: '121A', akunAsetNama: 'Komputer & Laptop', akunAkum: '122A', akunAkumNama: 'Akum. Penyusutan Komputer & Laptop', lastPenyusutan: null, totalPenyusutan: 0 });
+  DB.aset.push({ no: 'AST0001', tanggal: '2026-10-05', kategori: '121A', nama: 'Laptop Dell Latitude 15 inch', harga: aset1Harga, umur: aset1Umur, penyusutanBulanan: aset1Penyusutan, akumulasi: 0, keterangan: 'Untuk staf accounting', akunAset: ka1.akunAset, akunAsetNama: ka1.nama, akunAkum: ka1.akunAkum, akunAkumNama: `Akum. Penyusutan ${ka1.nama}`, lastPenyusutan: null, totalPenyusutan: 0 });
   postJurnal('2026-10-05', `Perolehan Aset AST0001 - Laptop Dell Latitude 15 inch`, [
-    { akun: '121A', nama: 'Komputer & Laptop', debit: aset1Harga, kredit: 0 },
+    { akun: ka1.akunAset, nama: ka1.nama, debit: aset1Harga, kredit: 0 },
     { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: aset1Harga },
   ]);
   const aset2Harga = 5000000, aset2Umur = 5;
   const aset2Penyusutan = aset2Harga / (aset2Umur * 12);
+  const ka2 = DB.kategoriAset.find(k => k.kode === '121C');
   DB.counter.aset++;
-  DB.aset.push({ no: 'AST0002', tanggal: '2026-10-08', kategori: '121C', nama: 'Meja & Kursi Kantor', harga: aset2Harga, umur: aset2Umur, penyusutanBulanan: aset2Penyusutan, akumulasi: 0, keterangan: 'Set meja 1 + kursi 2', akunAset: '121C', akunAsetNama: 'Furnitur', akunAkum: '122C', akunAkumNama: 'Akum. Penyusutan Furnitur', lastPenyusutan: null, totalPenyusutan: 0 });
+  DB.aset.push({ no: 'AST0002', tanggal: '2026-10-08', kategori: '121C', nama: 'Meja & Kursi Kantor', harga: aset2Harga, umur: aset2Umur, penyusutanBulanan: aset2Penyusutan, akumulasi: 0, keterangan: 'Set meja 1 + kursi 2', akunAset: ka2.akunAset, akunAsetNama: ka2.nama, akunAkum: ka2.akunAkum, akunAkumNama: `Akum. Penyusutan ${ka2.nama}`, lastPenyusutan: null, totalPenyusutan: 0 });
   postJurnal('2026-10-08', `Perolehan Aset AST0002 - Meja & Kursi Kantor`, [
-    { akun: '121C', nama: 'Furnitur', debit: aset2Harga, kredit: 0 },
+    { akun: ka2.akunAset, nama: ka2.nama, debit: aset2Harga, kredit: 0 },
     { akun: '101', nama: 'Kas / Bank', debit: 0, kredit: aset2Harga },
   ]);
 
